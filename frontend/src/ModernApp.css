@@ -1,0 +1,772 @@
+/* ===============================
+   RAG OPTIMIZER - SaaS Brutalist UI ✅
+   =============================== */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  background: #f6f6f6;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* APP SHELL */
+.appShell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* TOP BAR */
+.topBar {
+  min-height: 56px;
+  height: 56px;
+  border-bottom: 3px solid black;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  font-weight: 900;
+  box-shadow: 0 4px 0 black;
+  flex-shrink: 0;
+}
+
+.logo {
+  font-size: 15px;
+  letter-spacing: 1px;
+  color: black;
+}
+
+.topProfile {
+  font-size: 12px;
+  font-weight: 900;
+  color: black;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.profileIcon {
+  font-size: 16px;
+}
+
+/* ERROR */
+.topError {
+  border-bottom: 3px solid black;
+  background: #ffe1e1;
+  padding: 10px 16px;
+  font-weight: 900;
+  flex-shrink: 0;
+  color: black;
+}
+
+/* BODY */
+.appBody {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+/* SIDEBAR */
+.sidebar {
+  width: 380px;
+  min-width: 380px;
+  border-right: 3px solid black;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+/* WORKSPACE */
+.workspace {
+  flex: 1;
+  min-width: 0;
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* SCROLLBARS */
+.sidebar::-webkit-scrollbar,
+.workspace::-webkit-scrollbar {
+  width: 8px;
+}
+.sidebar::-webkit-scrollbar-thumb,
+.workspace::-webkit-scrollbar-thumb {
+  background: black;
+  border-radius: 8px;
+}
+
+/* BRUTAL CARD */
+.b-card {
+  background: white;
+  border: 3px solid black;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 5px 5px 0 black;
+  width: 100%;
+  max-width: 100%;
+}
+
+.b-head {
+  padding: 12px 14px;
+  font-weight: 900;
+  border-bottom: 3px solid black;
+  background: #fffbcc;
+  color: black;
+}
+
+.b-body {
+  padding: 12px;
+}
+
+/* STACK */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mini {
+  font-size: 12px;
+  font-weight: 800;
+  color: #333;
+}
+
+/* PILL */
+.pill {
+  border: 3px solid black;
+  border-radius: 12px;
+  padding: 12px;
+  background: #f2f2f2;
+  box-shadow: 3px 3px 0 black;
+}
+
+.pillLabel {
+  font-size: 11px;
+  font-weight: 900;
+  color: #333;
+}
+
+.pillValue {
+  font-size: 14px;
+  font-weight: 900;
+  color: black;
+  margin-top: 4px;
+}
+
+/* BUTTONS */
+.btnRow {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  border: 3px solid black;
+  background: white;
+  color: black;
+  padding: 9px 12px;
+  border-radius: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 black;
+  transition: 0.08s ease;
+  font-size: 12px;
+}
+
+.btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 black;
+  background: #f8f8f8;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: #e0e0e0;
+  color: #666;
+}
+
+.btn.danger {
+  background: #ffdddd;
+  color: black;
+}
+
+.activeBtn {
+  background: black !important;
+  color: white !important;
+}
+
+/* INPUTS */
+.qinput {
+  width: 100%;
+  border: 3px solid black;
+  padding: 9px 10px;
+  border-radius: 12px;
+  font-weight: 800;
+  outline: none;
+  box-shadow: 3px 3px 0 black;
+  font-size: 13px;
+  color: black;
+  background: white;
+}
+
+.qinput::placeholder {
+  color: #666;
+  opacity: 1;
+}
+
+select.qinput {
+  color: black;
+  background: white;
+  cursor: pointer;
+}
+
+select.qinput option {
+  color: black;
+  background: white;
+}
+
+.file {
+  width: 100%;
+  border: 3px solid black;
+  padding: 10px;
+  border-radius: 12px;
+  font-weight: 800;
+  background: #fff;
+  color: black;
+  box-shadow: 3px 3px 0 black;
+  cursor: pointer;
+}
+
+/* CHAT */
+.chatBox {
+  border: 3px solid black;
+  border-radius: 12px;
+  padding: 10px;
+  height: 180px;
+  overflow-y: auto;
+  background: #fff;
+  box-shadow: 3px 3px 0 black;
+}
+
+.chatLine {
+  font-size: 12px;
+  margin-bottom: 8px;
+  font-weight: 700;
+  color: black;
+}
+
+/* DASHBOARD PANEL */
+.dashboardPanel {
+  border: 3px solid black;
+  background: white;
+  box-shadow: 6px 6px 0 black;
+  border-radius: 14px;
+  overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+}
+
+.dashboardHeader {
+  padding: 12px 14px;
+  background: #fffbcc;
+  border-bottom: 3px solid black;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 900;
+  color: black;
+}
+
+.dashboardBody {
+  padding: 12px;
+}
+
+/* ANSWER */
+.finalAnswer {
+  border: 3px solid black;
+  border-radius: 12px;
+  padding: 12px;
+  background: #f5fff4;
+  box-shadow: 3px 3px 0 black;
+  font-weight: 800;
+  line-height: 1.5;
+  margin-top: 12px;
+  color: black;
+}
+
+/* CHARTS */
+.charts4 {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+  max-width: 100%;
+}
+
+.chartBox {
+  border: 3px solid black;
+  border-radius: 12px;
+  background: white;
+  padding: 8px;
+  box-shadow: 3px 3px 0 black;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.chartTitle {
+  font-weight: 900;
+  font-size: 12px;
+  border-bottom: 2px solid black;
+  padding-bottom: 6px;
+  margin-bottom: 10px;
+  color: black;
+}
+
+.chartCanvas {
+  height: 220px;
+  overflow: hidden;
+}
+
+@media (max-width: 900px) {
+  .chartCanvas {
+    height: 240px;
+  }
+}
+
+/* PIPELINES */
+.pipeGrid {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.pipeCard {
+  border: 3px solid black;
+  border-radius: 12px;
+  background: white;
+  padding: 10px;
+  box-shadow: 3px 3px 0 black;
+  color: black;
+}
+
+.pipeCard.winner {
+  background: #e9f4ff;
+}
+
+.pipeTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pipeScore {
+  font-weight: 900;
+  background: black;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.contextMini {
+  margin-top: 8px;
+  padding: 8px;
+  border-radius: 10px;
+  border: 2px solid black;
+  background: #fafafa;
+  font-size: 10px;
+  font-weight: 700;
+  color: black;
+}
+
+/* PDF */
+.pdfWrap {
+  margin-top: 14px;
+  border: 3px solid black;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 4px 4px 0 black;
+}
+
+.pdfWrap iframe {
+  width: 100%;
+  height: 480px;
+  border: 0;
+}
+
+/* LEADERBOARD */
+.leaderMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.leaderBadge {
+  border: 3px solid black;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-weight: 900;
+  font-size: 11px;
+  box-shadow: 2px 2px 0 black;
+  background: #fffbcc;
+  color: black;
+}
+
+.leaderRow {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  border: 3px solid black;
+  padding: 10px;
+  border-radius: 12px;
+  box-shadow: 3px 3px 0 black;
+  background: white;
+  margin-bottom: 10px;
+}
+
+.leaderRowStrong {
+  background: #e9f4ff;
+}
+
+.leaderRank {
+  font-weight: 900;
+  background: #fffbcc;
+  border: 3px solid black;
+  padding: 6px 10px;
+  border-radius: 999px;
+  color: black;
+}
+
+/* MOBILE */
+@media (max-width: 900px) {
+  .appBody {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    min-width: 100%;
+    border-right: none;
+    border-bottom: 3px solid black;
+  }
+
+  .charts4 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* PERFORMANCE BREAKDOWN */
+.perfCard {
+  border: 3px solid black;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 3px 3px 0 black;
+  padding: 12px;
+}
+
+.perfTitle {
+  font-weight: 900;
+  font-size: 13px;
+  border-bottom: 2px solid black;
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+}
+
+.perfGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 900px) {
+  .perfGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.perfBlock {
+  border: 3px solid black;
+  border-radius: 12px;
+  padding: 10px;
+  background: #fffbcc;
+  box-shadow: 3px 3px 0 black;
+  color: #000;
+}
+
+.perfBlockTitle {
+  font-weight: 900;
+  font-size: 12px;
+  margin-bottom: 8px;
+  border-bottom: 2px solid black;
+  padding-bottom: 6px;
+  color: #000;
+}
+
+.perfRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 800;
+  font-size: 12px;
+  padding: 4px 0;
+  color: #000;
+}
+
+.perfRow span {
+  color: #222;
+  font-weight: 800;
+}
+
+.perfRow b {
+  color: #000;
+  font-weight: 900;
+}
+
+.perfChartWrap {
+  margin-top: 12px;
+}
+
+/* PIPELINE CONFIG */
+.configGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .configGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border: 3px solid black;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 11px;
+  box-shadow: 2px 2px 0 black;
+}
+
+.badge.saved {
+  background: #ddffdd;
+}
+
+.badge.unsaved {
+  background: #ffdddd;
+}
+
+.badge.system {
+  background: #e0e0ff;
+  color: #000;
+}
+
+.badge.custom {
+  background: #ffe0ff;
+  color: #000;
+}
+
+/* ✅ CHUNK EXPLORER */
+.chunkToolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chunkFilters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .chunkFilters {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chunkList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 420px;
+  overflow: auto;
+  border: 3px solid black;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 3px 3px 0 black;
+  background: #fff;
+}
+
+.chunkCard {
+  border: 3px solid black;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 3px 3px 0 black;
+  background: #fafafa;
+}
+
+.chunkMeta {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 10px;
+  font-weight: 900;
+  font-size: 12px;
+}
+
+@media (max-width: 900px) {
+  .chunkMeta {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.chunkText {
+  margin-top: 10px;
+  border: 2px solid black;
+  border-radius: 10px;
+  padding: 10px;
+  background: white;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.chunkPager {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+  margin-top: 10px;
+}
+
+/* ✅ BATCH EVALUATION */
+.batchTextArea {
+  width: 100%;
+  min-height: 140px;
+  border: 3px solid black;
+  border-radius: 12px;
+  padding: 12px;
+  font-weight: 800;
+  box-shadow: 3px 3px 0 black;
+  font-family: monospace;
+  font-size: 12px;
+  resize: vertical;
+}
+
+.batchTable {
+  border: 3px solid black;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 3px 3px 0 black;
+  background: white;
+  margin-top: 12px;
+}
+
+.batchRow {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 10px;
+  padding: 10px;
+  border-bottom: 2px solid black;
+  font-weight: 800;
+  font-size: 12px;
+}
+
+.batchRow:last-child {
+  border-bottom: none;
+}
+
+@media (max-width: 900px) {
+  .batchRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ✅ Image Test Mode */
+.imgPreview {
+  width: 100%;
+  max-height: 260px;
+  object-fit: cover;
+  border: 3px solid black;
+  border-radius: 12px;
+  box-shadow: 3px 3px 0 black;
+  background: #f5f5f5;
+}
+
+.confidenceBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid black;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-weight: 900;
+  font-size: 13px;
+  box-shadow: 2px 2px 0 black;
+  background: #e9f4ff;
+  color: black;
+}
+
+/* ✅ Pipeline Details Grid - Better layout for A/B/C/D cards */
+.pipeRank {
+  font-size: 28px;
+  font-weight: 900;
+  color: black;
+  text-shadow: 2px 2px 0 #fff;
+}
+
+.pipeName {
+  margin-top: 8px;
+  font-weight: 900;
+  font-size: 16px;
+}
+
+.pipeSubname {
+  font-size: 10px;
+  font-weight: 700;
+  opacity: 0.6;
+  margin-top: 2px;
+}
+
+.pipeDetailsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.pipeDetail {
+  border: 2px solid black;
+  border-radius: 10px;
+  padding: 8px;
+  font-size: 11px;
+  font-weight: 800;
+  background: #fff;
+  box-shadow: 2px 2px 0 black;
+}
+
+@media (max-width: 900px) {
+  .pipeDetailsGrid {
+    grid-template-columns: 1fr;
+  }
+}
