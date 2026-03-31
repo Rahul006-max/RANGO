@@ -1,0 +1,6 @@
+**Comparison of System Variants:**
+
+*   P3: Content-Aware Splitting and P4: MC-Indexing tend to have higher values across most metrics.
+*   P2: RAG stands out for its high header_intersection_rate.
+
+Overall, the box plot provides a comprehensive comparison of the performance of different system variants across various metrics, allowing for the identification of strengths and weaknesses in each var
