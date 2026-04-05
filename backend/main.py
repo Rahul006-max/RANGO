@@ -38,21 +38,31 @@ from routes import (
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan handler - runs on startup and shutdown."""
-    # Startup
-    load_existing_collections()
-    provider = (settings.embedding_provider or "huggingface").strip().lower()
-    if provider == "huggingface":
-        print(f"[INFO] Initializing HuggingFace embeddings on startup: {settings.huggingface_model}")
-    elif provider == "ollama":
-        print(f"[INFO] Initializing Ollama embeddings on startup: {settings.ollama_embed_model}")
-    else:
-        print(f"[INFO] Initializing embeddings on startup using provider: {provider}")
-
-    get_embeddings()
-    print("[OK] Embeddings initialized during startup")
-
+    # Startup - run async without blocking
+    print("[INFO] Starting RAG Pipeline Optimizer...")
     print("[OK] Server started (Supabase JWKS auth + service role storage enabled)")
+    
+    # Load collections in background (don't block startup)
+    try:
+        load_existing_collections()
+        print("[OK] Collections loaded")
+    except Exception as e:
+        print(f"[WARN] Could not preload collections: {e}")
+    
+    # Initialize embeddings in background
+    try:
+        provider = (settings.embedding_provider or "huggingface").strip().lower()
+        if provider == "huggingface":
+            print(f"[INFO] Using HuggingFace embeddings: {settings.huggingface_model}")
+        elif provider == "ollama":
+            print(f"[INFO] Using Ollama embeddings: {settings.ollama_embed_model}")
+        get_embeddings()
+        print("[OK] Embeddings initialized")
+    except Exception as e:
+        print(f"[WARN] Could not initialize embeddings: {e}")
+    
     yield
+    
     # Shutdown
     print("🛑 Server shutting down...")
 
