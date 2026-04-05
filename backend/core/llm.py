@@ -309,8 +309,13 @@ Consider:
 - Does the answer directly address the question using information from the description?
 - Is the answer factually consistent with the description?
 - Is the answer appropriately specific (not vague or evasive)?
+- Does the answer claim there is no information if the description actually contains it?
 
-Reply with ONLY a single integer from 1 to 10. Nothing else."""
+OUTPUT FORMAT:
+First, write a brief 1-sentence reasoning for the score.
+Then, on a new line, write EXACTLY:
+SCORE: X
+Where X is an integer from 1 to 10."""
 
 
 def llm_grade_confidence(
@@ -347,15 +352,27 @@ def llm_grade_confidence(
         return 3.0
     try:
         from langchain_core.messages import HumanMessage
+        import re
         llm = get_llm_fast(model_name=model_name, api_key=api_key, temperature=temperature)
+        
+        # Manually escape descriptions and answers to prevent formatting errors
+        safe_desc = description[:1000].replace("{", "{{").replace("}", "}}")
+        safe_ans = answer.replace("{", "{{").replace("}", "}}")
+        safe_req = question.replace("{", "{{").replace("}", "}}")
+
         prompt = _CONF_GRADE_PROMPT.format(
-            description=description[:1000],
-            question=question,
-            answer=answer,
+            description=safe_desc,
+            question=safe_req,
+            answer=safe_ans,
         )
         result = llm.invoke([HumanMessage(content=prompt)])
         content = result.content if hasattr(result, "content") else str(result)
-        match = re.search(r"\b(\d+(?:\.\d+)?)\b", content.strip())
+        
+        match = re.search(r"SCORE:\s*(\d+(?:\.\d+)?)", content, re.IGNORECASE)
+        if not match:
+            # Fallback to finding any number if the structure wasn't followed
+            match = re.search(r"\b(\d+(?:\.\d+)?)\b", content.strip())
+        
         if match:
             return round(max(0.0, min(10.0, float(match.group(1)))), 1)
     except Exception as exc:

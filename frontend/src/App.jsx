@@ -13,6 +13,9 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import "./ModernApp.css";
 import TreeViewer from "./TreeViewer";
+import { FastModeResults } from "./components/FastModeResults";
+import { CompareModeResults } from "./components/CompareModeResults";
+import { DetailedMetricsPanel } from "./components/DetailedMetricsPanel";
 
 import {
   Chart as ChartJS,
@@ -1451,6 +1454,48 @@ export default function App() {
       }
 
       // ═══════════════════════════════════════════════════════════
+      // SECTION 3.5: PIPELINE CONFIGURATIONS & CONTEXT
+      // ═══════════════════════════════════════════════════════════
+      if (
+        queryData?.retrieval_comparison &&
+        queryData.retrieval_comparison.length > 0
+      ) {
+        addPageIfNeeded();
+        pdf.setFontSize(14);
+        pdf.setFont(undefined, "bold");
+        pdf.text("Pipeline Configurations & Context Snippets", 15, yPos);
+        yPos += 10;
+
+        pdf.setFont(undefined, "normal");
+        pdf.setFontSize(9);
+
+        queryData.retrieval_comparison.slice(0, 4).forEach((p, idx) => {
+          if (idx > 0) yPos += 6;
+          pdf.setFont(undefined, "bold");
+          pdf.text(`${idx + 1}. ${p.pipeline}`, 15, yPos);
+          yPos += 5;
+
+          pdf.setFont(undefined, "normal");
+          const configDetails = `Chunk Size: ${p.chunk_size || "N/A"} | Overlap: ${p.overlap || "N/A"} | Top-K: ${p.top_k || "N/A"} | Search: ${p.search_type || "N/A"}`;
+          pdf.text(configDetails, 20, yPos);
+          yPos += 5;
+
+          if (p.context_preview) {
+            const previewLines = pdf.splitTextToSize(
+              `Context: ${p.context_preview.replace(/\\n/g, " ")}`,
+              170,
+            );
+            const linesToPrint = previewLines.slice(0, 3);
+            pdf.text(linesToPrint, 20, yPos);
+            yPos += linesToPrint.length * 4 + 2;
+          }
+
+          addPageIfNeeded();
+        });
+        yPos += 4;
+      }
+
+      // ═══════════════════════════════════════════════════════════
       // SECTION 4: PER-PIPELINE DETAILED REPORT
       // ═══════════════════════════════════════════════════════════
       if (
@@ -2714,160 +2759,233 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
 
   /* ── Chat + Ask Thread View ── */
   const ChatThreadView = () => (
-    <>
-      <div className="threadViewport" id="threadViewport" ref={threadRef}>
-        <div className="threadInner">
-          {mode === "chat" &&
-            chatMessages.length === 0 &&
-            chatHistoryLoading && (
-              <div
-                style={{
-                  padding: "24px 16px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 12,
-                }}
-              >
-                {[0, 1, 2].map((i) => (
-                  <div
-                    key={i}
-                    style={{
-                      display: "flex",
-                      flexDirection: i % 2 === 0 ? "row" : "row-reverse",
-                      gap: 10,
-                      alignItems: "flex-start",
-                    }}
-                  >
+    <div
+      style={{ display: "flex", flex: 1, overflow: "hidden", width: "100%" }}
+    >
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          flex: 1,
+          minWidth: 300,
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        <div className="threadViewport" id="threadViewport" ref={threadRef}>
+          <div className="threadInner">
+            {mode === "chat" &&
+              chatMessages.length === 0 &&
+              chatHistoryLoading && (
+                <div
+                  style={{
+                    padding: "24px 16px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 12,
+                  }}
+                >
+                  {[0, 1, 2].map((i) => (
                     <div
+                      key={i}
                       style={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: "50%",
-                        background: "var(--c-border)",
-                        flexShrink: 0,
+                        display: "flex",
+                        flexDirection: i % 2 === 0 ? "row" : "row-reverse",
+                        gap: 10,
+                        alignItems: "flex-start",
                       }}
-                    />
-                    <div
-                      style={{
-                        height: 14,
-                        background: "var(--c-border)",
-                        borderRadius: 6,
-                        width: i === 1 ? "55%" : "72%",
-                        opacity: 0.5,
-                      }}
-                    />
+                    >
+                      <div
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: "50%",
+                          background: "var(--c-border)",
+                          flexShrink: 0,
+                        }}
+                      />
+                      <div
+                        style={{
+                          height: 14,
+                          background: "var(--c-border)",
+                          borderRadius: 6,
+                          width: i === 1 ? "55%" : "72%",
+                          opacity: 0.5,
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            {mode === "chat" &&
+              chatMessages.length === 0 &&
+              !askRes &&
+              !chatHistoryLoading && (
+                <div className="emptyThread">
+                  <div className="emptyIcon">
+                    <MessageSquare size={40} />
                   </div>
-                ))}
-              </div>
-            )}
-          {mode === "chat" &&
-            chatMessages.length === 0 &&
-            !askRes &&
-            !chatHistoryLoading && (
+                  <div>Start a conversation with your documents</div>
+                  <div className="mini">
+                    Select a collection and type a message below
+                  </div>
+                </div>
+              )}
+            {mode !== "chat" && !askRes && (
               <div className="emptyThread">
                 <div className="emptyIcon">
-                  <MessageSquare size={40} />
+                  {mode === "fast" ? (
+                    <Zap size={40} />
+                  ) : (
+                    <FlaskConical size={40} />
+                  )}
                 </div>
-                <div>Start a conversation with your documents</div>
+                <div>
+                  {mode === "fast"
+                    ? "Fast Analysis Mode"
+                    : "Pipeline Compare Mode"}
+                </div>
                 <div className="mini">
-                  Select a collection and type a message below
+                  Ask a question to analyze your documents
                 </div>
               </div>
             )}
-          {mode !== "chat" && !askRes && (
-            <div className="emptyThread">
-              <div className="emptyIcon">
-                {mode === "fast" ? (
-                  <Zap size={40} />
-                ) : (
-                  <FlaskConical size={40} />
-                )}
-              </div>
-              <div>
-                {mode === "fast"
-                  ? "Fast Analysis Mode"
-                  : "Pipeline Compare Mode"}
-              </div>
-              <div className="mini">
-                Ask a question to analyze your documents
-              </div>
-            </div>
-          )}
-          {mode === "chat" && chatMessages.length > chatDisplayLimit && (
-            <div style={{ textAlign: "center", padding: "8px 0" }}>
-              <button
-                className="btn"
-                style={{ fontSize: 12 }}
-                onClick={() => setChatDisplayLimit((l) => l + 40)}
-              >
-                Load {Math.min(40, chatMessages.length - chatDisplayLimit)}{" "}
-                earlier messages
-              </button>
-            </div>
-          )}
-          {mode === "chat" &&
-            chatMessages.slice(-chatDisplayLimit).map((m, i) => (
-              <div key={i}>
-                <div
-                  className={`msgRow ${m.role === "user" ? "user" : "assistant"}`}
+            {mode === "chat" && chatMessages.length > chatDisplayLimit && (
+              <div style={{ textAlign: "center", padding: "8px 0" }}>
+                <button
+                  className="btn"
+                  style={{ fontSize: 12 }}
+                  onClick={() => setChatDisplayLimit((l) => l + 40)}
                 >
-                  {m.role === "assistant" && (
-                    <div className="msgAvatar ai">AI</div>
-                  )}
+                  Load {Math.min(40, chatMessages.length - chatDisplayLimit)}{" "}
+                  earlier messages
+                </button>
+              </div>
+            )}
+            {mode === "chat" &&
+              chatMessages.slice(-chatDisplayLimit).map((m, i) => (
+                <div key={i}>
                   <div
-                    className={`msgBubble ${m.role === "user" ? "user" : "assistant"}`}
+                    className={`msgRow ${m.role === "user" ? "user" : "assistant"}`}
                   >
-                    {m.role === "assistant" && m.message ? (
-                      <>
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                          {m.message}
-                        </ReactMarkdown>
-                        <button
-                          className="copyBtn"
-                          onClick={() => copyToClipboard(m.message)}
-                          title="Copy"
-                        >
-                          <Copy size={12} /> Copy
-                        </button>
-                      </>
-                    ) : (
-                      m.message ||
-                      (chatLoading && i === chatMessages.length - 1 ? (
-                        <span style={{ opacity: 0.5 }}>Thinking...</span>
+                    {m.role === "assistant" && (
+                      <div className="msgAvatar ai">AI</div>
+                    )}
+                    <div
+                      className={`msgBubble ${m.role === "user" ? "user" : "assistant"}`}
+                    >
+                      {m.role === "assistant" && m.message ? (
+                        <>
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {m.message}
+                          </ReactMarkdown>
+                          <button
+                            className="copyBtn"
+                            onClick={() => copyToClipboard(m.message)}
+                            title="Copy"
+                          >
+                            <Copy size={12} /> Copy
+                          </button>
+                        </>
                       ) : (
-                        ""
-                      ))
+                        m.message ||
+                        (chatLoading && i === chatMessages.length - 1 ? (
+                          <span style={{ opacity: 0.5 }}>Thinking...</span>
+                        ) : (
+                          ""
+                        ))
+                      )}
+                    </div>
+                    {m.role === "user" && (
+                      <div className="msgAvatar human">
+                        {user?.email?.[0]?.toUpperCase() || "U"}
+                      </div>
                     )}
                   </div>
-                  {m.role === "user" && (
-                    <div className="msgAvatar human">
-                      {user?.email?.[0]?.toUpperCase() || "U"}
+                  {m.role === "assistant" && chatAnalytics[i] && (
+                    <div className="msgMeta">
+                      <Zap size={11} />
+                      <span>{chatAnalytics[i].pipeline}</span>
+                      <span>·</span>
+                      <span>{chatAnalytics[i].latency_ms} ms</span>
+                      <span>·</span>
+                      <span>{chatAnalytics[i].docs_retrieved} docs</span>
+                      {chatAnalytics[i].smart_extract && (
+                        <>
+                          <span>·</span>
+                          <span>smart extract</span>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
-                {m.role === "assistant" && chatAnalytics[i] && (
-                  <div className="msgMeta">
-                    <Zap size={11} />
-                    <span>{chatAnalytics[i].pipeline}</span>
-                    <span>·</span>
-                    <span>{chatAnalytics[i].latency_ms} ms</span>
-                    <span>·</span>
-                    <span>{chatAnalytics[i].docs_retrieved} docs</span>
-                    {chatAnalytics[i].smart_extract && (
-                      <>
-                        <span>·</span>
-                        <span>smart extract</span>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-          {mode !== "chat" &&
-            fastHistory.map((entry, idx) => (
-              <Fragment key={entry.id || idx}>
+              ))}
+            {mode !== "chat" &&
+              fastHistory
+                .filter((entry) => entry.mode === mode)
+                .map((entry, idx) => (
+                  <Fragment key={entry.id || idx}>
+                    <div className="msgRow user">
+                      <div className="msgBubble user">{entry.question}</div>
+                      <div className="msgAvatar human">
+                        {user?.email?.[0]?.toUpperCase() || "U"}
+                      </div>
+                    </div>
+                    <div className="msgRow assistant">
+                      <div className="msgAvatar ai">AI</div>
+                      <div className="msgBubble assistant">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {entry.answer}
+                        </ReactMarkdown>
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: "8px",
+                            marginTop: "6px",
+                          }}
+                        >
+                          <button
+                            className="copyBtn"
+                            onClick={() => copyToClipboard(entry.answer)}
+                            title="Copy"
+                          >
+                            <Copy size={12} /> Copy
+                          </button>
+                          {(entry.metrics || entry.retrieval_comparison) && (
+                            <button
+                              className="copyBtn"
+                              onClick={() => {
+                                setAskRes({
+                                  final_answer: entry.answer,
+                                  best_pipeline: entry.best_pipeline,
+                                  metrics: entry.metrics || {},
+                                  retrieval_comparison:
+                                    entry.retrieval_comparison || [],
+                                });
+                                setShowDashboard(true);
+                              }}
+                              title="View Results"
+                            >
+                              <BarChart3 size={12} /> View Results
+                            </button>
+                          )}
+                        </div>
+                        {entry.best_pipeline && (
+                          <div style={{ marginTop: 8 }}>
+                            <span className="bestPill">
+                              <Trophy size={14} style={{ marginRight: 4 }} />{" "}
+                              {entry.best_pipeline}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </Fragment>
+                ))}
+            {mode !== "chat" && asking && (
+              <>
                 <div className="msgRow user">
-                  <div className="msgBubble user">{entry.question}</div>
+                  <div className="msgBubble user">{pendingQuestion}</div>
                   <div className="msgAvatar human">
                     {user?.email?.[0]?.toUpperCase() || "U"}
                   </div>
@@ -2875,421 +2993,357 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
                 <div className="msgRow assistant">
                   <div className="msgAvatar ai">AI</div>
                   <div className="msgBubble assistant">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {entry.answer}
-                    </ReactMarkdown>
-                    <div
-                      style={{ display: "flex", gap: "8px", marginTop: "6px" }}
-                    >
-                      <button
-                        className="copyBtn"
-                        onClick={() => copyToClipboard(entry.answer)}
-                        title="Copy"
-                      >
-                        <Copy size={12} /> Copy
-                      </button>
-                      {(entry.metrics || entry.retrieval_comparison) && (
-                        <button
-                          className="copyBtn"
-                          onClick={() => {
-                            setAskRes({
-                              final_answer: entry.answer,
-                              best_pipeline: entry.best_pipeline,
-                              metrics: entry.metrics || {},
-                              retrieval_comparison:
-                                entry.retrieval_comparison || [],
-                            });
-                            setShowDashboard(true);
-                          }}
-                          title="View Results"
-                        >
-                          <BarChart3 size={12} /> View Results
-                        </button>
-                      )}
+                    <div className="skeletonWrap">
+                      <div className="skeletonLine" style={{ width: "88%" }} />
+                      <div className="skeletonLine" style={{ width: "72%" }} />
+                      <div className="skeletonLine" style={{ width: "55%" }} />
                     </div>
-                    {entry.best_pipeline && (
-                      <div style={{ marginTop: 8 }}>
-                        <span className="bestPill">
-                          <Trophy size={14} style={{ marginRight: 4 }} />{" "}
-                          {entry.best_pipeline}
-                        </span>
-                      </div>
-                    )}
                   </div>
                 </div>
-              </Fragment>
-            ))}
-          {mode !== "chat" && asking && (
-            <>
-              <div className="msgRow user">
-                <div className="msgBubble user">{pendingQuestion}</div>
-                <div className="msgAvatar human">
-                  {user?.email?.[0]?.toUpperCase() || "U"}
-                </div>
-              </div>
-              <div className="msgRow assistant">
-                <div className="msgAvatar ai">AI</div>
-                <div className="msgBubble assistant">
-                  <div className="skeletonWrap">
-                    <div className="skeletonLine" style={{ width: "88%" }} />
-                    <div className="skeletonLine" style={{ width: "72%" }} />
-                    <div className="skeletonLine" style={{ width: "55%" }} />
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
+              </>
+            )}
 
-          {/* Phase 2.2: Error state if no retrieval results (but not for Page Index which doesn't have retrieval_comparison) */}
-          {mode !== "chat" &&
-            askRes &&
-            (!askRes.retrieval_comparison ||
-              askRes.retrieval_comparison.length === 0) &&
-            (!askRes.final_answer || askRes.final_answer.trim() === "") && (
-              <div className="noResultsCard">
-                <div style={{ textAlign: "center", padding: "40px 20px" }}>
-                  <AlertTriangle
-                    size={32}
-                    style={{ color: "var(--c-warning)", marginBottom: 12 }}
+            {/* Phase 2.2: Error state if no retrieval results (but not for Page Index which doesn't have retrieval_comparison) */}
+            {mode !== "chat" &&
+              askRes &&
+              (!askRes.retrieval_comparison ||
+                askRes.retrieval_comparison.length === 0) &&
+              (!askRes.final_answer || askRes.final_answer.trim() === "") && (
+                <div className="noResultsCard">
+                  <div style={{ textAlign: "center", padding: "40px 20px" }}>
+                    <AlertTriangle
+                      size={32}
+                      style={{ color: "var(--c-warning)", marginBottom: 12 }}
+                    />
+                    <div
+                      style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}
+                    >
+                      No retrieval results available
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "var(--c-text-secondary)",
+                        marginBottom: 16,
+                      }}
+                    >
+                      The pipelines returned no documents for this query.
+                    </div>
+                    <button
+                      className="btn"
+                      onClick={() => {
+                        setQuestion("");
+                        setAskRes(null);
+                      }}
+                      style={{ fontSize: 12 }}
+                    >
+                      Try Another Query
+                    </button>
+                  </div>
+                </div>
+              )}
+
+            {/* Phase 2.3: Loading state during Fast query */}
+            {mode === "fast" && asking && (
+              <div className="loadingCard">
+                <div style={{ padding: "40px 20px", textAlign: "center" }}>
+                  <div
+                    className="btnSpinner"
+                    style={{ width: 40, height: 40, margin: "0 auto 16px" }}
                   />
                   <div
-                    style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 600,
+                      color: "var(--c-text-secondary)",
+                    }}
                   >
-                    No retrieval results available
+                    Querying pipelines...
                   </div>
                   <div
                     style={{
                       fontSize: 12,
-                      color: "var(--c-text-secondary)",
-                      marginBottom: 16,
+                      color: "var(--c-text-muted)",
+                      marginTop: 8,
                     }}
                   >
-                    The pipelines returned no documents for this query.
+                    Retrieving and analyzing documents
                   </div>
-                  <button
-                    className="btn"
-                    onClick={() => {
-                      setQuestion("");
-                      setAskRes(null);
-                    }}
-                    style={{ fontSize: 12 }}
-                  >
-                    Try Another Query
-                  </button>
                 </div>
               </div>
             )}
 
-          {/* Phase 2.3: Loading state during Fast query */}
-          {mode === "fast" && asking && (
-            <div className="loadingCard">
-              <div style={{ padding: "40px 20px", textAlign: "center" }}>
-                <div
-                  className="btnSpinner"
-                  style={{ width: 40, height: 40, margin: "0 auto 16px" }}
-                />
-                <div
-                  style={{
-                    fontSize: 14,
-                    fontWeight: 600,
-                    color: "var(--c-text-secondary)",
-                  }}
-                >
-                  Querying pipelines...
-                </div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: "var(--c-text-muted)",
-                    marginTop: 8,
-                  }}
-                >
-                  Retrieving and analyzing documents
-                </div>
-              </div>
-            </div>
-          )}
+            {/* Fast Mode Results */}
+            {mode === "fast" && (
+              <FastModeResults result={askRes} askLoading={asking} />
+            )}
 
-          {/* Show answer in main area for fast/compare, but analytics in side panel */}
-          {(mode === "fast" || mode === "compare") && askRes && (
-            <div className="resultsArea" style={{ padding: "20px 0" }}>
-              <div className="finalAnswer" style={{ marginBottom: 0 }}>
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {askRes.final_answer}
-                </ReactMarkdown>
-                <button
-                  className="copyBtn"
-                  onClick={() => copyToClipboard(askRes.final_answer)}
-                  title="Copy"
-                >
-                  <Copy size={12} /> Copy
-                </button>
-              </div>
-            </div>
-          )}
-
-          {mode !== "chat" && ResultsDashboard()}
+            {/* Compare Mode Results */}
+            {mode === "compare" && (
+              <CompareModeResults result={askRes} askLoading={asking} />
+            )}
+          </div>
         </div>
-      </div>
-      <div className="composerWrap">
-        <div className="claudeComposer">
-          {showDocBar && collectionFiles.length > 0 && (
-            <div
-              style={{
-                display: "flex",
-                gap: 6,
-                flexWrap: "wrap",
-                padding: "8px 12px 6px",
-                borderBottom: "1px solid var(--c-border)",
-              }}
-            >
-              {collectionFiles.map((f) => (
-                <button
-                  key={f.id}
-                  className="btn"
-                  style={{
-                    fontSize: 11,
-                    padding: "3px 10px",
-                    borderRadius: 20,
-                    fontWeight: 500,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 4,
-                    maxWidth: 200,
-                  }}
-                  title={`${f.filename} | Using: ${activeCollectionIndexType === "vector" ? "Vector DB" : "Page Index"}`}
-                  onClick={() => openPdfInViewer({ fileId: f.id, page: 0 })}
-                >
-                  <FileText size={11} style={{ flexShrink: 0 }} />
-                  <span
-                    style={{
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {f.filename?.length > 16
-                      ? f.filename.slice(0, 16) + "\u2026"
-                      : f.filename}
-                    {" | "}
-                    <span style={{ color: "var(--c-text-secondary)" }}>
-                      {activeCollectionIndexType === "vector"
-                        ? "Vector"
-                        : "Tree"}
-                    </span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-          <div className="composerInner">
-            <div className="composerTextWrap">
-              <textarea
-                className="composerInput"
-                rows={1}
-                placeholder={
-                  mode === "chat"
-                    ? "Message your documents..."
-                    : mode === "fast"
-                      ? "Ask for quick analysis..."
-                      : "Ask to compare all pipelines..."
-                }
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleUnifiedQuery();
-                  }
+        <div className="composerWrap">
+          <div className="claudeComposer">
+            {showDocBar && collectionFiles.length > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  gap: 6,
+                  flexWrap: "wrap",
+                  padding: "8px 12px 6px",
+                  borderBottom: "1px solid var(--c-border)",
                 }}
-                onInput={(e) => {
-                  e.target.style.height = "auto";
-                  e.target.style.height =
-                    Math.min(e.target.scrollHeight, 200) + "px";
-                }}
-              />
-            </div>
-            <div className="composerActions">
-              <button
-                className="composerBtn"
-                onClick={() => {
-                  setForceNewCollection(false);
-                  setShowUploadModal(true);
-                  setUploadRes(null);
-                  setFiles([]);
-                }}
-                title="Add PDFs to this collection"
-                aria-label="Upload"
               >
-                <Paperclip size={16} />
-              </button>
-              {mode === "chat" && (
-                <>
+                {collectionFiles.map((f) => (
                   <button
-                    className="composerBtn"
-                    onClick={fetchChat}
-                    disabled={!collectionId}
-                    title="Refresh"
-                    aria-label="Refresh"
+                    key={f.id}
+                    className="btn"
+                    style={{
+                      fontSize: 11,
+                      padding: "3px 10px",
+                      borderRadius: 20,
+                      fontWeight: 500,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 4,
+                      maxWidth: 200,
+                    }}
+                    title={`${f.filename} | Using: ${activeCollectionIndexType === "vector" ? "Vector DB" : "Page Index"}`}
+                    onClick={() => openPdfInViewer({ fileId: f.id, page: 0 })}
                   >
-                    <RefreshCw size={16} />
+                    <FileText size={11} style={{ flexShrink: 0 }} />
+                    <span
+                      style={{
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {f.filename?.length > 16
+                        ? f.filename.slice(0, 16) + "\u2026"
+                        : f.filename}
+                      {" | "}
+                      <span style={{ color: "var(--c-text-secondary)" }}>
+                        {activeCollectionIndexType === "vector"
+                          ? "Vector"
+                          : "Tree"}
+                      </span>
+                    </span>
                   </button>
-                  <button
-                    className="composerBtn"
-                    onClick={() => setClearChatModalOpen(true)}
-                    disabled={!collectionId}
-                    title="Clear"
-                    aria-label="Clear"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </>
-              )}
-              {askRes && mode !== "chat" && (
-                <button
-                  className={`composerBtn ${showDashboard ? "active" : ""}`}
-                  onClick={() => setShowDashboard((s) => !s)}
-                  title="Results"
-                  aria-label="Results"
-                >
-                  <BarChart3 size={16} />
-                </button>
-              )}
-              {indexMissing && (
+                ))}
+              </div>
+            )}
+            <div className="composerInner">
+              <div className="composerTextWrap">
+                <textarea
+                  className="composerInput"
+                  rows={1}
+                  placeholder={
+                    mode === "chat"
+                      ? "Message your documents..."
+                      : mode === "fast"
+                        ? "Ask for quick analysis..."
+                        : "Ask to compare all pipelines..."
+                  }
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleUnifiedQuery();
+                    }
+                  }}
+                  onInput={(e) => {
+                    e.target.style.height = "auto";
+                    e.target.style.height =
+                      Math.min(e.target.scrollHeight, 200) + "px";
+                  }}
+                />
+              </div>
+              <div className="composerActions">
                 <button
                   className="composerBtn"
-                  onClick={rebuildIndex}
-                  disabled={rebuildingIndex}
-                  title="Rebuild"
-                  aria-label="Rebuild"
+                  onClick={() => {
+                    setForceNewCollection(false);
+                    setShowUploadModal(true);
+                    setUploadRes(null);
+                    setFiles([]);
+                  }}
+                  title="Add PDFs to this collection"
+                  aria-label="Upload"
                 >
-                  {rebuildingIndex ? (
-                    <span className="btnSpinner" />
+                  <Paperclip size={16} />
+                </button>
+                {mode === "chat" && (
+                  <>
+                    <button
+                      className="composerBtn"
+                      onClick={fetchChat}
+                      disabled={!collectionId}
+                      title="Refresh"
+                      aria-label="Refresh"
+                    >
+                      <RefreshCw size={16} />
+                    </button>
+                    <button
+                      className="composerBtn"
+                      onClick={() => setClearChatModalOpen(true)}
+                      disabled={!collectionId}
+                      title="Clear"
+                      aria-label="Clear"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </>
+                )}
+                {askRes && mode !== "chat" && (
+                  <button
+                    className={`composerBtn ${showDashboard ? "active" : ""}`}
+                    onClick={() => setShowDashboard((s) => !s)}
+                    title="Results"
+                    aria-label="Results"
+                  >
+                    <BarChart3 size={16} />
+                  </button>
+                )}
+                {indexMissing && (
+                  <button
+                    className="composerBtn"
+                    onClick={rebuildIndex}
+                    disabled={rebuildingIndex}
+                    title="Rebuild"
+                    aria-label="Rebuild"
+                  >
+                    {rebuildingIndex ? (
+                      <span className="btnSpinner" />
+                    ) : (
+                      <Wrench size={16} />
+                    )}
+                  </button>
+                )}
+                {collectionId && collectionFiles.length > 0 && (
+                  <button
+                    className={`composerBtn ${showDocBar ? "active" : ""}`}
+                    onClick={() => setShowDocBar((s) => !s)}
+                    title={`${collectionFiles.length} document${collectionFiles.length !== 1 ? "s" : ""} in this collection`}
+                    aria-label="Toggle document list"
+                  >
+                    <FileText size={16} />
+                    <span
+                      style={{
+                        fontSize: 10,
+                        marginLeft: 3,
+                        fontWeight: 600,
+                        lineHeight: 1,
+                      }}
+                    >
+                      {collectionFiles.length}
+                    </span>
+                  </button>
+                )}
+                <div className="composerSpacer" />
+                <div className="modeMenuWrap" ref={modeMenuRef}>
+                  <button
+                    className="modeSelector"
+                    onClick={() => setModeMenuOpen((o) => !o)}
+                    title="Switch mode"
+                  >
+                    <span className="modeIcon">
+                      {mode === "chat" ? (
+                        <MessageSquare size={14} />
+                      ) : mode === "fast" ? (
+                        <Zap size={14} />
+                      ) : (
+                        <FlaskConical size={14} />
+                      )}
+                    </span>
+                    <span className="modeName">
+                      {mode === "chat"
+                        ? "Chat"
+                        : mode === "fast"
+                          ? "Fast"
+                          : "Compare"}
+                    </span>
+                    <span className="modeChevron">▾</span>
+                  </button>
+                  {modeMenuOpen && (
+                    <div className="modeMenu">
+                      {[
+                        {
+                          key: "chat",
+                          icon: <MessageSquare size={14} />,
+                          label: "Chat",
+                          desc: "Streaming conversation",
+                        },
+                        {
+                          key: "fast",
+                          icon: <Zap size={14} />,
+                          label: "Fast",
+                          desc: "Quick single-pipeline answer",
+                        },
+                        {
+                          key: "compare",
+                          icon: <FlaskConical size={14} />,
+                          label: "Compare",
+                          desc: "Compare all 4 pipelines",
+                        },
+                      ].map(({ key, icon, label, desc }) => (
+                        <button
+                          key={key}
+                          className={`modeMenuItem ${mode === key ? "active" : ""}`}
+                          onClick={() => {
+                            setMode(key);
+                            setModeMenuOpen(false);
+                          }}
+                        >
+                          <span className="modeMenuIcon">{icon}</span>
+                          <span className="modeMenuText">
+                            <span className="modeMenuLabel">{label}</span>
+                            <span className="modeMenuDesc">{desc}</span>
+                          </span>
+                          {mode === key && (
+                            <span className="modeMenuCheck">✓</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button
+                  className="sendBtn"
+                  onClick={handleUnifiedQuery}
+                  disabled={
+                    !user ||
+                    (mode !== "image" && !collectionId) ||
+                    asking ||
+                    chatLoading ||
+                    (mode !== "image" && !question.trim())
+                  }
+                  title="Send"
+                  aria-label="Send"
+                >
+                  {asking || chatLoading ? (
+                    <span className="btnSpinner light" />
                   ) : (
-                    <Wrench size={16} />
+                    <ArrowUp size={18} />
                   )}
                 </button>
-              )}
-              {collectionId && collectionFiles.length > 0 && (
-                <button
-                  className={`composerBtn ${showDocBar ? "active" : ""}`}
-                  onClick={() => setShowDocBar((s) => !s)}
-                  title={`${collectionFiles.length} document${collectionFiles.length !== 1 ? "s" : ""} in this collection`}
-                  aria-label="Toggle document list"
-                >
-                  <FileText size={16} />
-                  <span
-                    style={{
-                      fontSize: 10,
-                      marginLeft: 3,
-                      fontWeight: 600,
-                      lineHeight: 1,
-                    }}
-                  >
-                    {collectionFiles.length}
-                  </span>
-                </button>
-              )}
-              <div className="composerSpacer" />
-              <div className="modeMenuWrap" ref={modeMenuRef}>
-                <button
-                  className="modeSelector"
-                  onClick={() => setModeMenuOpen((o) => !o)}
-                  title="Switch mode"
-                >
-                  <span className="modeIcon">
-                    {mode === "chat" ? (
-                      <MessageSquare size={14} />
-                    ) : mode === "fast" ? (
-                      <Zap size={14} />
-                    ) : (
-                      <FlaskConical size={14} />
-                    )}
-                  </span>
-                  <span className="modeName">
-                    {mode === "chat"
-                      ? "Chat"
-                      : mode === "fast"
-                        ? "Fast"
-                        : "Compare"}
-                  </span>
-                  <span className="modeChevron">▾</span>
-                </button>
-                {modeMenuOpen && (
-                  <div className="modeMenu">
-                    {[
-                      {
-                        key: "chat",
-                        icon: <MessageSquare size={14} />,
-                        label: "Chat",
-                        desc: "Streaming conversation",
-                      },
-                      {
-                        key: "fast",
-                        icon: <Zap size={14} />,
-                        label: "Fast",
-                        desc: "Quick single-pipeline answer",
-                      },
-                      {
-                        key: "compare",
-                        icon: <FlaskConical size={14} />,
-                        label: "Compare",
-                        desc: "Compare all 4 pipelines",
-                      },
-                    ].map(({ key, icon, label, desc }) => (
-                      <button
-                        key={key}
-                        className={`modeMenuItem ${mode === key ? "active" : ""}`}
-                        onClick={() => {
-                          setMode(key);
-                          setModeMenuOpen(false);
-                        }}
-                      >
-                        <span className="modeMenuIcon">{icon}</span>
-                        <span className="modeMenuText">
-                          <span className="modeMenuLabel">{label}</span>
-                          <span className="modeMenuDesc">{desc}</span>
-                        </span>
-                        {mode === key && (
-                          <span className="modeMenuCheck">✓</span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                )}
               </div>
-              <button
-                className="sendBtn"
-                onClick={handleUnifiedQuery}
-                disabled={
-                  !user ||
-                  (mode !== "image" && !collectionId) ||
-                  asking ||
-                  chatLoading ||
-                  (mode !== "image" && !question.trim())
-                }
-                title="Send"
-                aria-label="Send"
-              >
-                {asking || chatLoading ? (
-                  <span className="btnSpinner light" />
-                ) : (
-                  <ArrowUp size={18} />
-                )}
-              </button>
             </div>
           </div>
+          {(asking || chatLoading) && (
+            <div
+              className="timerBadge"
+              style={{ textAlign: "center", padding: "4px 0" }}
+            >
+              Thinking... {queryElapsed}s
+            </div>
+          )}
         </div>
-        {(asking || chatLoading) && (
-          <div
-            className="timerBadge"
-            style={{ textAlign: "center", padding: "4px 0" }}
-          >
-            Thinking... {queryElapsed}s
-          </div>
-        )}
       </div>
-    </>
+    </div>
   );
 
   /* ── Pipeline Config Panel ── */
@@ -3504,7 +3558,7 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
 
   /* ── Image Test Panel ── */
   const ImageTestPanel = () => (
-    <div className="configPanel">
+    <div className="configPanel" style={{ overflowY: "auto", overflowX: "hidden" }}>
       <div className="claudeCard">
         <div className="claudeCardHead">Image Analysis</div>
         <div className="claudeCardBody">
@@ -3765,15 +3819,7 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
 
   /* ── Results Dashboard (Claude style) ── */
   const ResultsDashboard = () => {
-    // Don't show in main area for fast/compare modes anymore (moved to side panel)
-    if (
-      !showDashboard ||
-      !askRes ||
-      mode === "chat" ||
-      mode === "fast" ||
-      mode === "compare"
-    )
-      return null;
+    if (!showDashboard || !askRes || mode === "chat") return null;
 
     // In fast mode, hide analytics when the AI couldn't find an answer
     const _noAnswerPhrases = [
@@ -5054,6 +5100,8 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
               borderRadius: 12,
               fontFamily: "var(--font-sans)",
               fontSize: 13,
+              background: "#fff",
+              color: "#000",
             },
           }}
         />
@@ -5318,342 +5366,20 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
 
             {/* Fast/Compare Mode Analysis — show all analytics in side panel */}
             {(mode === "fast" || mode === "compare") &&
-              askRes &&
-              (() => {
-                const _noAnswerPhrases = [
-                  "i don't know based on the documents",
-                  "i do not know based on the documents",
-                  "i don't know based on",
-                  "cannot find",
-                  "no information",
-                  "not found in the documents",
-                  "not present in the documents",
-                  "not mentioned in the",
-                ];
-                const hasNoAnswer =
-                  !askRes.final_answer ||
-                  askRes.final_answer.trim() === "" ||
-                  _noAnswerPhrases.some((p) =>
-                    askRes.final_answer?.toLowerCase().includes(p),
-                  );
-
-                if (hasNoAnswer) return null;
-
-                const safeMetrics = askRes?.metrics || {};
-                const latencyChart = {
-                  labels: [
-                    "Embedding",
-                    "Retrieval",
-                    "Rerank",
-                    "LLM",
-                    "Smart Extract",
-                  ],
-                  datasets: [
-                    {
-                      label: "Time (ms)",
-                      data: [
-                        safeMetrics?.timings_ms?.embedding_ms || 0,
-                        safeMetrics?.timings_ms?.retrieval_ms || 0,
-                        safeMetrics?.timings_ms?.rerank_ms || 0,
-                        safeMetrics?.timings_ms?.llm_ms || 0,
-                        safeMetrics?.timings_ms?.smart_extract_ms || 0,
-                      ],
-                      borderRadius: 6,
-                      backgroundColor: "rgba(174, 86, 48, 0.8)",
-                      borderColor: "rgba(174, 86, 48, 1)",
-                      borderWidth: 0,
-                    },
-                  ],
-                };
-
-                return (
-                  <div className="rpSection">
-                    <div className="rpSectionTitle">
-                      <BarChart3 size={14} style={{ marginRight: 6 }} />{" "}
-                      Performance
+              askRes && (
+                <div style={{ marginTop: 16 }}>
+                  {mode === "compare" ? (
+                    <DetailedMetricsPanel
+                      result={askRes}
+                      retrieval_comparison={askRes.retrieval_comparison}
+                    />
+                  ) : (
+                    <div style={{ padding: "0 10px" }}>
+                      <ResultsDashboard />
                     </div>
-
-                    <div
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 600,
-                        marginBottom: 12,
-                        color: "var(--c-text)",
-                      }}
-                    >
-                      Best Pipeline
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 14,
-                        fontWeight: 700,
-                        color: "var(--c-accent)",
-                        marginBottom: 16,
-                      }}
-                    >
-                      {askRes.best_pipeline}
-                    </div>
-
-                    {/* Performance Breakdown */}
-                    <div
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 600,
-                        marginBottom: 10,
-                        color: "var(--c-text)",
-                      }}
-                    >
-                      Latency Breakdown
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 6,
-                        marginBottom: 16,
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          fontSize: 11,
-                        }}
-                      >
-                        <span>Embedding</span>
-                        <b>{fmtMs(safeMetrics?.timings_ms?.embedding_ms)}</b>
-                      </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          fontSize: 11,
-                        }}
-                      >
-                        <span>Retrieval</span>
-                        <b>{fmtMs(safeMetrics?.timings_ms?.retrieval_ms)}</b>
-                      </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          fontSize: 11,
-                        }}
-                      >
-                        <span>Rerank</span>
-                        <b>{fmtMs(safeMetrics?.timings_ms?.rerank_ms)}</b>
-                      </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          fontSize: 11,
-                        }}
-                      >
-                        <span>LLM</span>
-                        <b>{fmtMs(safeMetrics?.timings_ms?.llm_ms)}</b>
-                      </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          fontSize: 11,
-                        }}
-                      >
-                        <span>Smart Extract</span>
-                        <b>
-                          {fmtMs(safeMetrics?.timings_ms?.smart_extract_ms)}
-                        </b>
-                      </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          fontSize: 11,
-                          fontWeight: 700,
-                          borderTop: "1px solid var(--c-border)",
-                          paddingTop: 6,
-                          marginTop: 6,
-                        }}
-                      >
-                        <span>Total</span>
-                        <b>{fmtMs(safeMetrics?.timings_ms?.total_ms)}</b>
-                      </div>
-                    </div>
-
-                    {/* Tokens & Cost */}
-                    <div
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 600,
-                        marginBottom: 10,
-                        color: "var(--c-text)",
-                      }}
-                    >
-                      Tokens &amp; Cost
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 6,
-                        marginBottom: 16,
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          fontSize: 11,
-                        }}
-                      >
-                        <span>Prompt Tokens</span>
-                        <b>{fmtNum(safeMetrics?.tokens?.prompt_tokens)}</b>
-                      </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          fontSize: 11,
-                        }}
-                      >
-                        <span>Completion</span>
-                        <b>{fmtNum(safeMetrics?.tokens?.completion_tokens)}</b>
-                      </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          fontSize: 11,
-                        }}
-                      >
-                        <span>Total Tokens</span>
-                        <b>{fmtNum(safeMetrics?.tokens?.total_tokens)}</b>
-                      </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          fontSize: 11,
-                        }}
-                      >
-                        <span>Cost</span>
-                        <b>{fmtMoney(safeMetrics?.cost_usd)}</b>
-                      </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          fontSize: 11,
-                        }}
-                      >
-                        <span>Model</span>
-                        <b style={{ fontSize: 10 }}>
-                          {safeMetrics?.tokens?.model || "unknown"}
-                        </b>
-                      </div>
-                    </div>
-
-                    {/* Latency Chart */}
-                    {safeMetrics?.timings_ms && (
-                      <div style={{ marginBottom: 16 }}>
-                        <div
-                          style={{
-                            fontSize: 12,
-                            fontWeight: 600,
-                            marginBottom: 10,
-                            color: "var(--c-text)",
-                          }}
-                        >
-                          Latency Stages
-                        </div>
-                        <div style={{ height: 200 }}>
-                          <Bar
-                            data={latencyChart}
-                            options={brutalistChartOptions}
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Per-Pipeline Latency */}
-                    {safeMetrics?.pipeline_latencies?.length > 0 && (
-                      <div>
-                        <div
-                          style={{
-                            fontSize: 12,
-                            fontWeight: 600,
-                            marginBottom: 10,
-                            color: "var(--c-text)",
-                          }}
-                        >
-                          Per-Pipeline Latency
-                        </div>
-                        {safeMetrics.pipeline_latencies.map((pl, idx) => (
-                          <div
-                            key={idx}
-                            style={{
-                              fontSize: 11,
-                              marginBottom: 12,
-                              padding: 10,
-                              background:
-                                idx === 0
-                                  ? "var(--c-winner-bg)"
-                                  : "var(--c-surface)",
-                              border: "1px solid var(--c-border)",
-                              borderRadius: 6,
-                            }}
-                          >
-                            <div style={{ fontWeight: 600, marginBottom: 8 }}>
-                              {pl.pipeline}
-                            </div>
-                            <div
-                              style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                              }}
-                            >
-                              <span>Retrieval</span>
-                              <b>{fmtMs(pl.retrieval_ms)}</b>
-                            </div>
-                            <div
-                              style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                              }}
-                            >
-                              <span>Context Build</span>
-                              <b>{fmtMs(pl.context_build_ms)}</b>
-                            </div>
-                            <div
-                              style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                              }}
-                            >
-                              <span>Scoring</span>
-                              <b>{fmtMs(pl.scoring_ms)}</b>
-                            </div>
-                            <div
-                              style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                fontWeight: 700,
-                                borderTop: "1px solid var(--c-border)",
-                                paddingTop: 8,
-                                marginTop: 8,
-                              }}
-                            >
-                              <span>Total</span>
-                              <b>{fmtMs(pl.total_ms)}</b>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
+                  )}
+                </div>
+              )}
 
             {/* This Chat's Ranking — ranked by composite score: docs retrieved, latency, smart cache */}
             {mode === "chat" &&
@@ -6389,27 +6115,27 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
             fontSize: 13,
             padding: "10px 16px",
             maxWidth: 420,
-            background: "var(--c-surface, #fff)",
-            color: "var(--c-text, #1a1a18)",
+            background: "#fff",
+            color: "#000",
           },
           success: {
             duration: 3000,
             style: {
-              background: "var(--c-winner-bg, #d4edda)",
-              color: "var(--c-text, #155724)",
+              background: "#d4edda",
+              color: "#155724",
             },
           },
           error: {
             duration: 5000,
             style: {
-              background: "var(--c-danger-bg, #ffe1e1)",
-              color: "var(--c-text, #721c24)",
+              background: "#ffe1e1",
+              color: "#721c24",
             },
           },
           loading: {
             style: {
-              background: "var(--c-surface-alt, #f5f5f0)",
-              color: "var(--c-text, #1a1a18)",
+              background: "#f5f5f0",
+              color: "#000",
             },
           },
         }}
