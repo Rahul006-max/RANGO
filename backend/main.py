@@ -1,137 +1,86 @@
 ﻿"""
-RAG Pipeline Optimizer - Main application file (modular architecture).
-
-This file serves as the application entry point and orchestrates:
-- FastAPI app initialization
-- CORS middleware configuration
-- Router registration for modular route handling
-- Lifespan events for startup/shutdown
+RAG Pipeline Optimizer - Minimal startup version
+Ensures server starts quickly without blocking on heavy initialization.
 """
-from contextlib import asynccontextmanager
 import os
+import sys
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from config import get_settings
-
-settings = get_settings()
-
-# Import route modules with error handling
-try:
-    from routes import (
-        analytics,
-        collections,
-        upload,
-        ask,
-        chat,
-        leaderboard,
-        batch_eval,
-        image_test,
-        export,
-        page_index,
-        models,
-    )
-    routes_loaded = True
-    print("[OK] All routes imported successfully")
-except Exception as e:
-    print(f"[WARN] Some routes failed to import: {e}")
-    routes_loaded = False
-    # Create empty module objects as fallbacks
-    class EmptyRouter:
-        router = None
-    analytics = collections = upload = ask = chat = EmptyRouter()
-    leaderboard = batch_eval = image_test = export = page_index = models = EmptyRouter()
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Application lifespan handler - minimal startup."""
-    print("[INFO] RAG Pipeline Optimizer starting...")
-    yield
-    print("🛑 Server shutting down...")
-
-
-# =========================
-# FastAPI App Initialization
-# =========================
+# Create minimal FastAPI app
 app = FastAPI(
     title="RAG Pipeline Optimizer",
-    version="2.3",
-    lifespan=lifespan
+    version="2.3"
 )
 
-# =========================
-# CORS Middleware
-# =========================
+# Add CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.environ.get("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(","),
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-
-# =========================
-# Health Check Routes
-# =========================
+# ===== BASIC ENDPOINTS =====
 @app.get("/")
 def home():
-    """Health check endpoint."""
-    return {"message": "Backend running [OK]"}
+    return {"status": "ok", "message": "RAG Pipeline Optimizer Backend Running"}
 
-
-@app.get("/auth-check")
-def auth_check(user=Depends(get_current_user)):
-    """Authentication verification endpoint."""
-    return {"ok": True, "user_id": user.get("sub"), "email": user.get("email")}
-
-
-# =========================
-# Health Check Endpoint
-# =========================
 @app.get("/health")
-async def health_check():
-    """Simple health check endpoint."""
-    return {"status": "ok", "service": "RAG Pipeline Optimizer"}
+def health():
+    return {"status": "ok"}
 
-
-# =========================
-# Router Registration (with error handling)
-# =========================
-if routes_loaded:
-    routers_to_include = [
-        (collections, "Collections"),
-        (upload, "Upload"),
-        (ask, "Ask"),
-        (chat, "Chat"),
-        (leaderboard, "Leaderboard"),
-        (batch_eval, "Batch Evaluation"),
-        (image_test, "Image Test"),
-        (page_index, "PageIndex"),
-        (analytics, "Analytics"),
-        (export, "Export"),
-        (models, "Models"),
-    ]
-    
-    for router_module, name in routers_to_include:
-        try:
-            if hasattr(router_module, 'router') and router_module.router:
-                app.include_router(router_module.router, tags=[name])
-        except Exception as e:
-            print(f"[WARN] Could not include {name} router: {e}")
-else:
-    print("[WARN] Routes were not loaded, skipping router registration")
+# ===== LOAD ROUTES AFTER STARTUP =====
+@app.on_event("startup")
+async def load_routes():
+    """Load routes after server starts (doesn't block port binding)."""
+    print("[INFO] Loading API routes...")
+    try:
+        from routes import (
+            analytics, collections, upload, ask, chat,
+            leaderboard, batch_eval, image_test, export,
+            page_index, models
+        )
+        
+        # Register all available routers
+        routers = [
+            (collections, "Collections"),
+            (upload, "Upload"),
+            (ask, "Ask"),
+            (chat, "Chat"),
+            (leaderboard, "Leaderboard"),
+            (batch_eval, "Batch Eval"),
+            (image_test, "Image Test"),
+            (export, "Export"),
+            (page_index, "PageIndex"),
+            (analytics, "Analytics"),
+            (models, "Models"),
+        ]
+        
+        for module, name in routers:
+            try:
+                if hasattr(module, 'router') and module.router:
+                    app.include_router(module.router, tags=[name])
+                    print(f"[OK] Loaded {name} router")
+            except Exception as e:
+                print(f"[WARN] Could not load {name} router: {str(e)[:100]}")
+                
+        print("[OK] Route loading complete")
+    except Exception as e:
+        print(f"[WARN] Failed to load routes: {str(e)[:200]}")
+        print("[INFO] Running in minimal mode")
 
 
 if __name__ == "__main__":
     try:
         import uvicorn
         port = int(os.getenv("PORT", 8002))
-        print(f"[INFO] Starting server on 0.0.0.0:{port}")
-        uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
+        print(f"[INFO] Starting RAG Pipeline Optimizer on 0.0.0.0:{port}")
+        uvicorn.run(app, host="0.0.0.0", port=port)
     except Exception as e:
-        print(f"[ERROR] Failed to start server: {e}")
+        print(f"[ERROR] Failed to start: {e}")
         import traceback
         traceback.print_exc()
-        raise
+        sys.exit(1)
