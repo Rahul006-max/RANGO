@@ -13,6 +13,7 @@ Automatically builds and tests four distinct RAG archetypes (Balanced, Fastest, 
 ### Advanced Scoring Engine
 
 A proprietary algorithm ranks responses based on:
+
 - Relevance: 35%
 - Groundedness: 35%
 - Quality: 15%
@@ -21,12 +22,14 @@ A proprietary algorithm ranks responses based on:
 ### Hybrid Indexing
 
 Supports two indexing strategies:
+
 - **Vector Database**: Standard ChromaDB integration for semantic similarity search
 - **Page Index**: Hierarchical tree-based indexing for complex document traversal and structured navigation
 
 ### Real-time Analytics
 
 Track comprehensive metrics including:
+
 - Token usage per query
 - USD cost estimation
 - Per-stage latency breakdown (Embedding, Retrieval, LLM, Smart Extract)
@@ -35,6 +38,7 @@ Track comprehensive metrics including:
 ### Multi-Model Support
 
 Provider-agnostic integration with:
+
 - OpenAI (GPT-4, GPT-3.5-turbo)
 - Ollama (local model deployment)
 - Custom OpenAI-compatible API endpoints
@@ -42,6 +46,7 @@ Provider-agnostic integration with:
 ### Exportable Intelligence
 
 Generate detailed comparison reports in multiple formats:
+
 - PDF with formatted analysis and charts
 - CSV for spreadsheet analysis
 - JSON for programmatic access
@@ -81,12 +86,12 @@ Local Chroma Collections
 
 RANGO evaluates four distinct RAG pipeline configurations:
 
-| Pipeline | Focus | Chunk Size | Top-K | Use Case |
-|----------|-------|-----------|-------|----------|
-| Balanced (MMR) | Diversity & Accuracy | 800 | 6 | General-purpose queries |
-| Fastest (Similarity) | Low Latency | 500 | 4 | Real-time applications |
-| Accurate (Similarity+) | High Recall | 900 | 8 | Comprehensive answers |
-| DeepSearch (MMR+) | Complex Queries | 1200 | 10 | Multi-faceted questions |
+| Pipeline               | Focus                | Chunk Size | Top-K | Use Case                |
+| ---------------------- | -------------------- | ---------- | ----- | ----------------------- |
+| Balanced (MMR)         | Diversity & Accuracy | 800        | 6     | General-purpose queries |
+| Fastest (Similarity)   | Low Latency          | 500        | 4     | Real-time applications  |
+| Accurate (Similarity+) | High Recall          | 900        | 8     | Comprehensive answers   |
+| DeepSearch (MMR+)      | Complex Queries      | 1200       | 10    | Multi-faceted questions |
 
 ## Architecture
 
@@ -216,6 +221,7 @@ Vision-capable analysis supporting image uploads and visual document understandi
 ### Custom Pipeline Configuration
 
 Fine-grained control over retrieval parameters:
+
 - Chunk size: 256-2048 tokens
 - Overlap percentage: 0-50%
 - Top-K documents: 1-20
@@ -257,6 +263,7 @@ Key tables managed via Supabase PostgreSQL:
 ## Contributing
 
 Contributions are welcome. Please ensure:
+
 - Code follows PEP 8 style guidelines (Python)
 - Frontend code uses established component patterns
 - Changes include relevant tests
