@@ -2406,6 +2406,8 @@ html[data-theme="dark"] .badge.unsaved {
    =================================== */
 
 .configPanel {
+  overflow-y: auto;
+  flex: 1;
   max-width: 768px;
   width: 100%;
   margin: 0 auto;
