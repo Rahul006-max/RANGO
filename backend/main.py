@@ -9,61 +9,45 @@ This file serves as the application entry point and orchestrates:
 """
 from contextlib import asynccontextmanager
 import os
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from dependencies import get_current_user
 from config import get_settings
-from dependencies import get_embeddings
-from core.retrieval import load_existing_collections
 
 settings = get_settings()
 
-# Import route modules
-from routes import (
-    analytics,
-    collections,
-    upload,
-    ask,
-    chat,
-    leaderboard,
-    batch_eval,
-    image_test,
-    export,
-    page_index,
-    models,
-)
+# Import route modules with error handling
+try:
+    from routes import (
+        analytics,
+        collections,
+        upload,
+        ask,
+        chat,
+        leaderboard,
+        batch_eval,
+        image_test,
+        export,
+        page_index,
+        models,
+    )
+    routes_loaded = True
+    print("[OK] All routes imported successfully")
+except Exception as e:
+    print(f"[WARN] Some routes failed to import: {e}")
+    routes_loaded = False
+    # Create empty module objects as fallbacks
+    class EmptyRouter:
+        router = None
+    analytics = collections = upload = ask = chat = EmptyRouter()
+    leaderboard = batch_eval = image_test = export = page_index = models = EmptyRouter()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan handler - runs on startup and shutdown."""
-    # Startup - run async without blocking
-    print("[INFO] Starting RAG Pipeline Optimizer...")
-    print("[OK] Server started (Supabase JWKS auth + service role storage enabled)")
-    
-    # Load collections in background (don't block startup)
-    try:
-        load_existing_collections()
-        print("[OK] Collections loaded")
-    except Exception as e:
-        print(f"[WARN] Could not preload collections: {e}")
-    
-    # Initialize embeddings in background
-    try:
-        provider = (settings.embedding_provider or "huggingface").strip().lower()
-        if provider == "huggingface":
-            print(f"[INFO] Using HuggingFace embeddings: {settings.huggingface_model}")
-        elif provider == "ollama":
-            print(f"[INFO] Using Ollama embeddings: {settings.ollama_embed_model}")
-        get_embeddings()
-        print("[OK] Embeddings initialized")
-    except Exception as e:
-        print(f"[WARN] Could not initialize embeddings: {e}")
-    
+    """Application lifespan handler - minimal startup."""
+    print("[INFO] RAG Pipeline Optimizer starting...")
     yield
-    
-    # Shutdown
     print("🛑 Server shutting down...")
 
 
@@ -104,22 +88,50 @@ def auth_check(user=Depends(get_current_user)):
 
 
 # =========================
-# Router Registration
+# Health Check Endpoint
 # =========================
-app.include_router(collections.router, tags=["Collections"])
-app.include_router(upload.router, tags=["Upload"])
-app.include_router(ask.router, tags=["Ask"])
-app.include_router(chat.router, tags=["Chat"])
-app.include_router(leaderboard.router, tags=["Leaderboard"])
-app.include_router(batch_eval.router, tags=["Batch Evaluation"])
-app.include_router(image_test.router, tags=["Image Test"])
-app.include_router(page_index.router, tags=["PageIndex"])
-app.include_router(analytics.router, tags=["Analytics"])
-app.include_router(export.router, tags=["Export"])
-app.include_router(models.router, tags=["Models"])
+@app.get("/health")
+async def health_check():
+    """Simple health check endpoint."""
+    return {"status": "ok", "service": "RAG Pipeline Optimizer"}
+
+
+# =========================
+# Router Registration (with error handling)
+# =========================
+if routes_loaded:
+    routers_to_include = [
+        (collections, "Collections"),
+        (upload, "Upload"),
+        (ask, "Ask"),
+        (chat, "Chat"),
+        (leaderboard, "Leaderboard"),
+        (batch_eval, "Batch Evaluation"),
+        (image_test, "Image Test"),
+        (page_index, "PageIndex"),
+        (analytics, "Analytics"),
+        (export, "Export"),
+        (models, "Models"),
+    ]
+    
+    for router_module, name in routers_to_include:
+        try:
+            if hasattr(router_module, 'router') and router_module.router:
+                app.include_router(router_module.router, tags=[name])
+        except Exception as e:
+            print(f"[WARN] Could not include {name} router: {e}")
+else:
+    print("[WARN] Routes were not loaded, skipping router registration")
 
 
 if __name__ == "__main__":
-    import uvicorn
-    port = int(os.getenv("PORT", 8002))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    try:
+        import uvicorn
+        port = int(os.getenv("PORT", 8002))
+        print(f"[INFO] Starting server on 0.0.0.0:{port}")
+        uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
+    except Exception as e:
+        print(f"[ERROR] Failed to start server: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
