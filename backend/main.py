@@ -107,3 +107,9 @@ app.include_router(page_index.router, tags=["PageIndex"])
 app.include_router(analytics.router, tags=["Analytics"])
 app.include_router(export.router, tags=["Export"])
 app.include_router(models.router, tags=["Models"])
+
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.getenv("PORT", 8002))
+    uvicorn.run(app, host="0.0.0.0", port=port)
