@@ -60,15 +60,20 @@ def get_leaderboard(
         
         res = query.order("created_at", desc=False).execute()
         
-        # Get chat message count (always all time for engagement)
-        chat_res = sb.table("rag_chat_messages") \
-            .select("id", count="exact") \
-            .eq("collection_id", collection_id) \
-            .eq("user_id", user_id) \
-            .execute()
-        
-        rows = res.data or []
-        chat_count = chat_res.count or 0
+        # Get chat message count
+        if mode in ("all", "chat"):
+            chat_query = sb.table("rag_chat_messages") \
+                .select("id", count="exact") \
+                .eq("collection_id", collection_id) \
+                .eq("user_id", user_id)
+                
+            if cutoff_date:
+                chat_query = chat_query.gte("created_at", cutoff_date.isoformat())
+                
+            chat_res = chat_query.execute()
+            chat_count = chat_res.count or 0
+        else:
+            chat_count = 0
         total_questions = len(rows)
         
         if not rows:
@@ -261,13 +266,20 @@ def get_global_leaderboard(
 
         res = query.order("created_at", desc=False).execute()
 
-        chat_res = sb.table("rag_chat_messages") \
-            .select("id", count="exact") \
-            .eq("user_id", user_id) \
-            .execute()
+        if mode in ("all", "chat"):
+            chat_query = sb.table("rag_chat_messages") \
+                .select("id", count="exact") \
+                .eq("user_id", user_id)
+                
+            if cutoff_date:
+                chat_query = chat_query.gte("created_at", cutoff_date.isoformat())
+                
+            chat_res = chat_query.execute()
+            chat_count = chat_res.count or 0
+        else:
+            chat_count = 0
 
         rows = res.data or []
-        chat_count = chat_res.count or 0
         total_questions = len(rows)
 
         if not rows:
