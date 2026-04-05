@@ -4,38 +4,15 @@ Ensures server starts quickly without blocking on heavy initialization.
 """
 import os
 import sys
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# Create minimal FastAPI app
-app = FastAPI(
-    title="RAG Pipeline Optimizer",
-    version="2.3"
-)
-
-# Add CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# ===== BASIC ENDPOINTS =====
-@app.get("/")
-def home():
-    return {"status": "ok", "message": "RAG Pipeline Optimizer Backend Running"}
-
-@app.get("/health")
-def health():
-    return {"status": "ok"}
-
-# ===== LOAD ROUTES AFTER STARTUP =====
-@app.on_event("startup")
-async def load_routes():
-    """Load routes after server starts (doesn't block port binding)."""
+# ===== LIFESPAN HANDLER (doesn't block port binding) =====
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Load routes after server starts listening."""
     print("[INFO] Loading API routes...")
     try:
         from routes import (
@@ -71,6 +48,33 @@ async def load_routes():
     except Exception as e:
         print(f"[WARN] Failed to load routes: {str(e)[:200]}")
         print("[INFO] Running in minimal mode")
+    
+    yield
+    print("[INFO] Server shutting down...")
+
+# Create FastAPI app with lifespan handler
+app = FastAPI(
+    title="RAG Pipeline Optimizer",
+    version="2.3",
+    lifespan=lifespan
+)
+
+# Add CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.get("/")
+def home():
+    return {"status": "ok", "message": "RAG Pipeline Optimizer Backend Running"}
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
 
 if __name__ == "__main__":
