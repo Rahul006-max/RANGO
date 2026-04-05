@@ -138,7 +138,21 @@ export const DetailedMetricsPanel = ({ result, retrieval_comparison }) => {
                     {item.doc.metadata?.title || "Document"}
                   </div>
                   {item.doc.page_content && (
-                    <div className="source-chunk" style={{ fontSize: "1em", color: "var(--c-text-muted)", marginTop: "8px", maxHeight: "150px", overflowY: "auto", padding: "8px", backgroundColor: "var(--c-bg)", border: "1px solid var(--c-border)", borderRadius: "4px", whiteSpace: "pre-wrap" }}>
+                    <div
+                      className="source-chunk"
+                      style={{
+                        fontSize: "1em",
+                        color: "var(--c-text-muted)",
+                        marginTop: "8px",
+                        maxHeight: "150px",
+                        overflowY: "auto",
+                        padding: "8px",
+                        backgroundColor: "var(--c-bg)",
+                        border: "1px solid var(--c-border)",
+                        borderRadius: "4px",
+                        whiteSpace: "pre-wrap",
+                      }}
+                    >
                       {item.doc.page_content}
                     </div>
                   )}
@@ -170,7 +184,21 @@ export const DetailedMetricsPanel = ({ result, retrieval_comparison }) => {
                       {doc.metadata?.title || "Document"}
                     </div>
                     {doc.page_content && (
-                      <div className="source-chunk" style={{ fontSize: "1em", color: "var(--c-text-muted)", marginTop: "8px", maxHeight: "150px", overflowY: "auto", padding: "8px", backgroundColor: "var(--c-bg)", border: "1px solid var(--c-border)", borderRadius: "4px", whiteSpace: "pre-wrap" }}>
+                      <div
+                        className="source-chunk"
+                        style={{
+                          fontSize: "1em",
+                          color: "var(--c-text-muted)",
+                          marginTop: "8px",
+                          maxHeight: "150px",
+                          overflowY: "auto",
+                          padding: "8px",
+                          backgroundColor: "var(--c-bg)",
+                          border: "1px solid var(--c-border)",
+                          borderRadius: "4px",
+                          whiteSpace: "pre-wrap",
+                        }}
+                      >
                         {doc.page_content}
                       </div>
                     )}
@@ -274,7 +302,7 @@ export const DetailedMetricsPanel = ({ result, retrieval_comparison }) => {
       {/* Tab Content */}
       <div className="metrics-content">
         {activeTab === "performance" && <PerformanceBreakdown />}
-                {activeTab === "parameters" && <ParameterDetails />}
+        {activeTab === "parameters" && <ParameterDetails />}
         {activeTab === "sources" && <SourceComparison />}
         {activeTab === "cost" && <CostAnalysis />}
       </div>

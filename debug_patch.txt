@@ -1,0 +1,12 @@
+
+                boxSizing: "border-box",
+              }}
+            >
+              <div
+                <img
+>                 src="/logo.png"
+                  alt="RAG Pipeline Logo"
+                  style={{
+
+
+

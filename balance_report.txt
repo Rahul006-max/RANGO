@@ -1,0 +1,569 @@
+Line 0: +0 -0 | Balance: 0 | const ChatThreadView = () => (
+Line 1: +1 -0 | Balance: 1 |     <div
+Line 2: +0 -0 | Balance: 1 |       style={{ display: "flex", flex: 1, overflow: "hidden", width: "100%" }}
+Line 3: +0 -0 | Balance: 1 |     >
+Line 4: +1 -0 | Balance: 2 |       <div
+Line 5: +0 -0 | Balance: 2 |         style={{
+Line 6: +0 -0 | Balance: 2 |           display: "flex",
+Line 7: +0 -0 | Balance: 2 |           flexDirection: "column",
+Line 8: +0 -0 | Balance: 2 |           flex: 1,
+Line 9: +0 -0 | Balance: 2 |           minWidth: 300,
+Line 10: +0 -0 | Balance: 2 |           position: "relative",
+Line 11: +0 -0 | Balance: 2 |           overflow: "hidden",
+Line 12: +0 -0 | Balance: 2 |         }}
+Line 13: +0 -0 | Balance: 2 |       >
+Line 14: +1 -0 | Balance: 3 |         <div className="threadViewport" id="threadViewport" ref={threadRef}>
+Line 15: +1 -0 | Balance: 4 |           <div className="threadInner">
+Line 16: +0 -0 | Balance: 4 |             {mode === "chat" &&
+Line 17: +0 -0 | Balance: 4 |               chatMessages.length === 0 &&
+Line 18: +0 -0 | Balance: 4 |               chatHistoryLoading && (
+Line 19: +1 -0 | Balance: 5 |                 <div
+Line 20: +0 -0 | Balance: 5 |                   style={{
+Line 21: +0 -0 | Balance: 5 |                     padding: "24px 16px",
+Line 22: +0 -0 | Balance: 5 |                     display: "flex",
+Line 23: +0 -0 | Balance: 5 |                     flexDirection: "column",
+Line 24: +0 -0 | Balance: 5 |                     gap: 12,
+Line 25: +0 -0 | Balance: 5 |                   }}
+Line 26: +0 -0 | Balance: 5 |                 >
+Line 27: +0 -0 | Balance: 5 |                   {[0, 1, 2].map((i) => (
+Line 28: +1 -0 | Balance: 6 |                     <div
+Line 29: +0 -0 | Balance: 6 |                       key={i}
+Line 30: +0 -0 | Balance: 6 |                       style={{
+Line 31: +0 -0 | Balance: 6 |                         display: "flex",
+Line 32: +0 -0 | Balance: 6 |                         flexDirection: i % 2 === 0 ? "row" : "row-reverse",
+Line 33: +0 -0 | Balance: 6 |                         gap: 10,
+Line 34: +0 -0 | Balance: 6 |                         alignItems: "flex-start",
+Line 35: +0 -0 | Balance: 6 |                       }}
+Line 36: +0 -0 | Balance: 6 |                     >
+Line 37: +0 -0 | Balance: 6 |                       
+Line 38: +0 -0 | Balance: 6 |                       
+Line 39: +0 -1 | Balance: 5 |                     </div>
+Line 40: +0 -0 | Balance: 5 |                   ))}
+Line 41: +0 -1 | Balance: 4 |                 </div>
+Line 42: +0 -0 | Balance: 4 |               )}
+Line 43: +0 -0 | Balance: 4 |             {mode === "chat" &&
+Line 44: +0 -0 | Balance: 4 |               chatMessages.length === 0 &&
+Line 45: +0 -0 | Balance: 4 |               !askRes &&
+Line 46: +0 -0 | Balance: 4 |               !chatHistoryLoading && (
+Line 47: +1 -0 | Balance: 5 |                 <div className="emptyThread">
+Line 48: +1 -0 | Balance: 6 |                   <div className="emptyIcon">
+Line 49: +0 -0 | Balance: 6 |                     <MessageSquare size={40} />
+Line 50: +0 -1 | Balance: 5 |                   </div>
+Line 51: +1 -1 | Balance: 5 |                   <div>Start a conversation with your documents</div>
+Line 52: +1 -0 | Balance: 6 |                   <div className="mini">
+Line 53: +0 -0 | Balance: 6 |                     Select a collection and type a message below
+Line 54: +0 -1 | Balance: 5 |                   </div>
+Line 55: +0 -1 | Balance: 4 |                 </div>
+Line 56: +0 -0 | Balance: 4 |               )}
+Line 57: +0 -0 | Balance: 4 |             {mode !== "chat" && !askRes && (
+Line 58: +1 -0 | Balance: 5 |               <div className="emptyThread">
+Line 59: +1 -0 | Balance: 6 |                 <div className="emptyIcon">
+Line 60: +0 -0 | Balance: 6 |                   {mode === "fast" ? (
+Line 61: +0 -0 | Balance: 6 |                     <Zap size={40} />
+Line 62: +0 -0 | Balance: 6 |                   ) : (
+Line 63: +0 -0 | Balance: 6 |                     <FlaskConical size={40} />
+Line 64: +0 -0 | Balance: 6 |                   )}
+Line 65: +0 -1 | Balance: 5 |                 </div>
+Line 66: +1 -0 | Balance: 6 |                 <div>
+Line 67: +0 -0 | Balance: 6 |                   {mode === "fast"
+Line 68: +0 -0 | Balance: 6 |                     ? "Fast Analysis Mode"
+Line 69: +0 -0 | Balance: 6 |                     : "Pipeline Compare Mode"}
+Line 70: +0 -1 | Balance: 5 |                 </div>
+Line 71: +1 -0 | Balance: 6 |                 <div className="mini">
+Line 72: +0 -0 | Balance: 6 |                   Ask a question to analyze your documents
+Line 73: +0 -1 | Balance: 5 |                 </div>
+Line 74: +0 -1 | Balance: 4 |               </div>
+Line 75: +0 -0 | Balance: 4 |             )}
+Line 76: +0 -0 | Balance: 4 |             {mode === "chat" && chatMessages.length > chatDisplayLimit && (
+Line 77: +1 -0 | Balance: 5 |               <div style={{ textAlign: "center", padding: "8px 0" }}>
+Line 78: +0 -0 | Balance: 5 |                 <button
+Line 79: +0 -0 | Balance: 5 |                   className="btn"
+Line 80: +0 -0 | Balance: 5 |                   style={{ fontSize: 12 }}
+Line 81: +0 -0 | Balance: 5 |                   onClick={() => setChatDisplayLimit((l) => l + 40)}
+Line 82: +0 -0 | Balance: 5 |                 >
+Line 83: +0 -0 | Balance: 5 |                   Load {Math.min(40, chatMessages.length - chatDisplayLimit)}{" "}
+Line 84: +0 -0 | Balance: 5 |                   earlier messages
+Line 85: +0 -0 | Balance: 5 |                 </button>
+Line 86: +0 -1 | Balance: 4 |               </div>
+Line 87: +0 -0 | Balance: 4 |             )}
+Line 88: +0 -0 | Balance: 4 |             {mode === "chat" &&
+Line 89: +0 -0 | Balance: 4 |               chatMessages.slice(-chatDisplayLimit).map((m, i) => (
+Line 90: +1 -0 | Balance: 5 |                 <div key={i}>
+Line 91: +1 -0 | Balance: 6 |                   <div
+Line 92: +0 -0 | Balance: 6 |                     className={`msgRow ${m.role === "user" ? "user" : "assistant"}`}
+Line 93: +0 -0 | Balance: 6 |                   >
+Line 94: +0 -0 | Balance: 6 |                     {m.role === "assistant" && (
+Line 95: +1 -1 | Balance: 6 |                       <div className="msgAvatar ai">AI</div>
+Line 96: +0 -0 | Balance: 6 |                     )}
+Line 97: +1 -0 | Balance: 7 |                     <div
+Line 98: +0 -0 | Balance: 7 |                       className={`msgBubble ${m.role === "user" ? "user" : "assistant"}`}
+Line 99: +0 -0 | Balance: 7 |                     >
+Line 100: +0 -0 | Balance: 7 |                       {m.role === "assistant" && m.message ? (
+Line 101: +0 -0 | Balance: 7 |                         <>
+Line 102: +0 -0 | Balance: 7 |                           <ReactMarkdown remarkPlugins={[remarkGfm]}>
+Line 103: +0 -0 | Balance: 7 |                             {m.message}
+Line 104: +0 -0 | Balance: 7 |                           </ReactMarkdown>
+Line 105: +0 -0 | Balance: 7 |                           <button
+Line 106: +0 -0 | Balance: 7 |                             className="copyBtn"
+Line 107: +0 -0 | Balance: 7 |                             onClick={() => copyToClipboard(m.message)}
+Line 108: +0 -0 | Balance: 7 |                             title="Copy"
+Line 109: +0 -0 | Balance: 7 |                           >
+Line 110: +0 -0 | Balance: 7 |                             <Copy size={12} /> Copy
+Line 111: +0 -0 | Balance: 7 |                           </button>
+Line 112: +0 -0 | Balance: 7 |                         </>
+Line 113: +0 -0 | Balance: 7 |                       ) : (
+Line 114: +0 -0 | Balance: 7 |                         m.message ||
+Line 115: +0 -0 | Balance: 7 |                         (chatLoading && i === chatMessages.length - 1 ? (
+Line 116: +0 -0 | Balance: 7 |                           <span style={{ opacity: 0.5 }}>Thinking...</span>
+Line 117: +0 -0 | Balance: 7 |                         ) : (
+Line 118: +0 -0 | Balance: 7 |                           ""
+Line 119: +0 -0 | Balance: 7 |                         ))
+Line 120: +0 -0 | Balance: 7 |                       )}
+Line 121: +0 -1 | Balance: 6 |                     </div>
+Line 122: +0 -0 | Balance: 6 |                     {m.role === "user" && (
+Line 123: +1 -0 | Balance: 7 |                       <div className="msgAvatar human">
+Line 124: +0 -0 | Balance: 7 |                         {user?.email?.[0]?.toUpperCase() || "U"}
+Line 125: +0 -1 | Balance: 6 |                       </div>
+Line 126: +0 -0 | Balance: 6 |                     )}
+Line 127: +0 -1 | Balance: 5 |                   </div>
+Line 128: +0 -0 | Balance: 5 |                   {m.role === "assistant" && chatAnalytics[i] && (
+Line 129: +1 -0 | Balance: 6 |                     <div className="msgMeta">
+Line 130: +0 -0 | Balance: 6 |                       <Zap size={11} />
+Line 131: +0 -0 | Balance: 6 |                       <span>{chatAnalytics[i].pipeline}</span>
+Line 132: +0 -0 | Balance: 6 |                       <span>·</span>
+Line 133: +0 -0 | Balance: 6 |                       <span>{chatAnalytics[i].latency_ms} ms</span>
+Line 134: +0 -0 | Balance: 6 |                       <span>·</span>
+Line 135: +0 -0 | Balance: 6 |                       <span>{chatAnalytics[i].docs_retrieved} docs</span>
+Line 136: +0 -0 | Balance: 6 |                       {chatAnalytics[i].smart_extract && (
+Line 137: +0 -0 | Balance: 6 |                         <>
+Line 138: +0 -0 | Balance: 6 |                           <span>·</span>
+Line 139: +0 -0 | Balance: 6 |                           <span>smart extract</span>
+Line 140: +0 -0 | Balance: 6 |                         </>
+Line 141: +0 -0 | Balance: 6 |                       )}
+Line 142: +0 -1 | Balance: 5 |                     </div>
+Line 143: +0 -0 | Balance: 5 |                   )}
+Line 144: +0 -1 | Balance: 4 |                 </div>
+Line 145: +0 -0 | Balance: 4 |               ))}
+Line 146: +0 -0 | Balance: 4 |             {mode !== "chat" &&
+Line 147: +0 -0 | Balance: 4 |               fastHistory
+Line 148: +0 -0 | Balance: 4 |                 .filter((entry) => entry.mode === mode)
+Line 149: +0 -0 | Balance: 4 |                 .map((entry, idx) => (
+Line 150: +0 -0 | Balance: 4 |                   <Fragment key={entry.id || idx}>
+Line 151: +1 -0 | Balance: 5 |                     <div className="msgRow user">
+Line 152: +1 -1 | Balance: 5 |                       <div className="msgBubble user">{entry.question}</div>
+Line 153: +1 -0 | Balance: 6 |                       <div className="msgAvatar human">
+Line 154: +0 -0 | Balance: 6 |                         {user?.email?.[0]?.toUpperCase() || "U"}
+Line 155: +0 -1 | Balance: 5 |                       </div>
+Line 156: +0 -1 | Balance: 4 |                     </div>
+Line 157: +1 -0 | Balance: 5 |                     <div className="msgRow assistant">
+Line 158: +1 -1 | Balance: 5 |                       <div className="msgAvatar ai">AI</div>
+Line 159: +1 -0 | Balance: 6 |                       <div className="msgBubble assistant">
+Line 160: +0 -0 | Balance: 6 |                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
+Line 161: +0 -0 | Balance: 6 |                           {entry.answer}
+Line 162: +0 -0 | Balance: 6 |                         </ReactMarkdown>
+Line 163: +1 -0 | Balance: 7 |                         <div
+Line 164: +0 -0 | Balance: 7 |                           style={{
+Line 165: +0 -0 | Balance: 7 |                             display: "flex",
+Line 166: +0 -0 | Balance: 7 |                             gap: "8px",
+Line 167: +0 -0 | Balance: 7 |                             marginTop: "6px",
+Line 168: +0 -0 | Balance: 7 |                           }}
+Line 169: +0 -0 | Balance: 7 |                         >
+Line 170: +0 -0 | Balance: 7 |                           <button
+Line 171: +0 -0 | Balance: 7 |                             className="copyBtn"
+Line 172: +0 -0 | Balance: 7 |                             onClick={() => copyToClipboard(entry.answer)}
+Line 173: +0 -0 | Balance: 7 |                             title="Copy"
+Line 174: +0 -0 | Balance: 7 |                           >
+Line 175: +0 -0 | Balance: 7 |                             <Copy size={12} /> Copy
+Line 176: +0 -0 | Balance: 7 |                           </button>
+Line 177: +0 -0 | Balance: 7 |                           {(entry.metrics || entry.retrieval_comparison) && (
+Line 178: +0 -0 | Balance: 7 |                             <button
+Line 179: +0 -0 | Balance: 7 |                               className="copyBtn"
+Line 180: +0 -0 | Balance: 7 |                               onClick={() => {
+Line 181: +0 -0 | Balance: 7 |                                 setAskRes({
+Line 182: +0 -0 | Balance: 7 |                                   final_answer: entry.answer,
+Line 183: +0 -0 | Balance: 7 |                                   best_pipeline: entry.best_pipeline,
+Line 184: +0 -0 | Balance: 7 |                                   metrics: entry.metrics || {},
+Line 185: +0 -0 | Balance: 7 |                                   retrieval_comparison:
+Line 186: +0 -0 | Balance: 7 |                                     entry.retrieval_comparison || [],
+Line 187: +0 -0 | Balance: 7 |                                 });
+Line 188: +0 -0 | Balance: 7 |                                 setShowDashboard(true);
+Line 189: +0 -0 | Balance: 7 |                               }}
+Line 190: +0 -0 | Balance: 7 |                               title="View Results"
+Line 191: +0 -0 | Balance: 7 |                             >
+Line 192: +0 -0 | Balance: 7 |                               <BarChart3 size={12} /> View Results
+Line 193: +0 -0 | Balance: 7 |                             </button>
+Line 194: +0 -0 | Balance: 7 |                           )}
+Line 195: +0 -1 | Balance: 6 |                         </div>
+Line 196: +0 -0 | Balance: 6 |                         {entry.best_pipeline && (
+Line 197: +1 -0 | Balance: 7 |                           <div style={{ marginTop: 8 }}>
+Line 198: +0 -0 | Balance: 7 |                             <span className="bestPill">
+Line 199: +0 -0 | Balance: 7 |                               <Trophy size={14} style={{ marginRight: 4 }} />{" "}
+Line 200: +0 -0 | Balance: 7 |                               {entry.best_pipeline}
+Line 201: +0 -0 | Balance: 7 |                             </span>
+Line 202: +0 -1 | Balance: 6 |                           </div>
+Line 203: +0 -0 | Balance: 6 |                         )}
+Line 204: +0 -1 | Balance: 5 |                       </div>
+Line 205: +0 -1 | Balance: 4 |                     </div>
+Line 206: +0 -0 | Balance: 4 |                   </Fragment>
+Line 207: +0 -0 | Balance: 4 |                 ))}
+Line 208: +0 -0 | Balance: 4 |             {mode !== "chat" && asking && (
+Line 209: +0 -0 | Balance: 4 |               <>
+Line 210: +1 -0 | Balance: 5 |                 <div className="msgRow user">
+Line 211: +1 -1 | Balance: 5 |                   <div className="msgBubble user">{pendingQuestion}</div>
+Line 212: +1 -0 | Balance: 6 |                   <div className="msgAvatar human">
+Line 213: +0 -0 | Balance: 6 |                     {user?.email?.[0]?.toUpperCase() || "U"}
+Line 214: +0 -1 | Balance: 5 |                   </div>
+Line 215: +0 -1 | Balance: 4 |                 </div>
+Line 216: +1 -0 | Balance: 5 |                 <div className="msgRow assistant">
+Line 217: +1 -1 | Balance: 5 |                   <div className="msgAvatar ai">AI</div>
+Line 218: +1 -0 | Balance: 6 |                   <div className="msgBubble assistant">
+Line 219: +1 -0 | Balance: 7 |                     <div className="skeletonWrap">
+Line 220: +0 -0 | Balance: 7 |                       
+Line 221: +0 -0 | Balance: 7 |                       
+Line 222: +0 -0 | Balance: 7 |                       
+Line 223: +0 -1 | Balance: 6 |                     </div>
+Line 224: +0 -1 | Balance: 5 |                   </div>
+Line 225: +0 -1 | Balance: 4 |                 </div>
+Line 226: +0 -0 | Balance: 4 |               </>
+Line 227: +0 -0 | Balance: 4 |             )}
+Line 228: +0 -0 | Balance: 4 | 
+Line 229: +0 -0 | Balance: 4 |             {/* Phase 2.2: Error state if no retrieval results (but not for Page Index which doesn't have retrieval_comparison) */}
+Line 230: +0 -0 | Balance: 4 |             {mode !== "chat" &&
+Line 231: +0 -0 | Balance: 4 |               askRes &&
+Line 232: +0 -0 | Balance: 4 |               (!askRes.retrieval_comparison ||
+Line 233: +0 -0 | Balance: 4 |                 askRes.retrieval_comparison.length === 0) &&
+Line 234: +0 -0 | Balance: 4 |               (!askRes.final_answer || askRes.final_answer.trim() === "") && (
+Line 235: +1 -0 | Balance: 5 |                 <div className="noResultsCard">
+Line 236: +1 -0 | Balance: 6 |                   <div style={{ textAlign: "center", padding: "40px 20px" }}>
+Line 237: +0 -0 | Balance: 6 |                     <AlertTriangle
+Line 238: +0 -0 | Balance: 6 |                       size={32}
+Line 239: +0 -0 | Balance: 6 |                       style={{ color: "var(--c-warning)", marginBottom: 12 }}
+Line 240: +0 -0 | Balance: 6 |                     />
+Line 241: +1 -0 | Balance: 7 |                     <div
+Line 242: +0 -0 | Balance: 7 |                       style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}
+Line 243: +0 -0 | Balance: 7 |                     >
+Line 244: +0 -0 | Balance: 7 |                       No retrieval results available
+Line 245: +0 -1 | Balance: 6 |                     </div>
+Line 246: +1 -0 | Balance: 7 |                     <div
+Line 247: +0 -0 | Balance: 7 |                       style={{
+Line 248: +0 -0 | Balance: 7 |                         fontSize: 12,
+Line 249: +0 -0 | Balance: 7 |                         color: "var(--c-text-secondary)",
+Line 250: +0 -0 | Balance: 7 |                         marginBottom: 16,
+Line 251: +0 -0 | Balance: 7 |                       }}
+Line 252: +0 -0 | Balance: 7 |                     >
+Line 253: +0 -0 | Balance: 7 |                       The pipelines returned no documents for this query.
+Line 254: +0 -1 | Balance: 6 |                     </div>
+Line 255: +0 -0 | Balance: 6 |                     <button
+Line 256: +0 -0 | Balance: 6 |                       className="btn"
+Line 257: +0 -0 | Balance: 6 |                       onClick={() => {
+Line 258: +0 -0 | Balance: 6 |                         setQuestion("");
+Line 259: +0 -0 | Balance: 6 |                         setAskRes(null);
+Line 260: +0 -0 | Balance: 6 |                       }}
+Line 261: +0 -0 | Balance: 6 |                       style={{ fontSize: 12 }}
+Line 262: +0 -0 | Balance: 6 |                     >
+Line 263: +0 -0 | Balance: 6 |                       Try Another Query
+Line 264: +0 -0 | Balance: 6 |                     </button>
+Line 265: +0 -1 | Balance: 5 |                   </div>
+Line 266: +0 -1 | Balance: 4 |                 </div>
+Line 267: +0 -0 | Balance: 4 |               )}
+Line 268: +0 -0 | Balance: 4 | 
+Line 269: +0 -0 | Balance: 4 |             {/* Phase 2.3: Loading state during Fast query */}
+Line 270: +0 -0 | Balance: 4 |             {mode === "fast" && asking && (
+Line 271: +1 -0 | Balance: 5 |               <div className="loadingCard">
+Line 272: +1 -0 | Balance: 6 |                 <div style={{ padding: "40px 20px", textAlign: "center" }}>
+Line 273: +0 -0 | Balance: 6 |                   
+Line 274: +1 -0 | Balance: 7 |                   <div
+Line 275: +0 -0 | Balance: 7 |                     style={{
+Line 276: +0 -0 | Balance: 7 |                       fontSize: 14,
+Line 277: +0 -0 | Balance: 7 |                       fontWeight: 600,
+Line 278: +0 -0 | Balance: 7 |                       color: "var(--c-text-secondary)",
+Line 279: +0 -0 | Balance: 7 |                     }}
+Line 280: +0 -0 | Balance: 7 |                   >
+Line 281: +0 -0 | Balance: 7 |                     Querying pipelines...
+Line 282: +0 -1 | Balance: 6 |                   </div>
+Line 283: +1 -0 | Balance: 7 |                   <div
+Line 284: +0 -0 | Balance: 7 |                     style={{
+Line 285: +0 -0 | Balance: 7 |                       fontSize: 12,
+Line 286: +0 -0 | Balance: 7 |                       color: "var(--c-text-muted)",
+Line 287: +0 -0 | Balance: 7 |                       marginTop: 8,
+Line 288: +0 -0 | Balance: 7 |                     }}
+Line 289: +0 -0 | Balance: 7 |                   >
+Line 290: +0 -0 | Balance: 7 |                     Retrieving and analyzing documents
+Line 291: +0 -1 | Balance: 6 |                   </div>
+Line 292: +0 -1 | Balance: 5 |                 </div>
+Line 293: +0 -1 | Balance: 4 |               </div>
+Line 294: +0 -0 | Balance: 4 |             )}
+Line 295: +0 -0 | Balance: 4 | 
+Line 296: +0 -0 | Balance: 4 |             {/* Fast Mode Results */}
+Line 297: +0 -0 | Balance: 4 |             {mode === "fast" && (
+Line 298: +0 -0 | Balance: 4 |               <FastModeResults result={askRes} askLoading={asking} />
+Line 299: +0 -0 | Balance: 4 |             )}
+Line 300: +0 -0 | Balance: 4 | 
+Line 301: +0 -0 | Balance: 4 |             {/* Compare Mode Results */}
+Line 302: +0 -0 | Balance: 4 |             {mode === "compare" && (
+Line 303: +0 -0 | Balance: 4 |               <CompareModeResults result={askRes} askLoading={asking} />
+Line 304: +0 -0 | Balance: 4 |             )}
+Line 305: +0 -1 | Balance: 3 |           </div>
+Line 306: +0 -1 | Balance: 2 |         </div>
+Line 307: +1 -0 | Balance: 3 |         <div className="composerWrap">
+Line 308: +1 -0 | Balance: 4 |           <div className="claudeComposer">
+Line 309: +0 -0 | Balance: 4 |             {showDocBar && collectionFiles.length > 0 && (
+Line 310: +1 -0 | Balance: 5 |               <div
+Line 311: +0 -0 | Balance: 5 |                 style={{
+Line 312: +0 -0 | Balance: 5 |                   display: "flex",
+Line 313: +0 -0 | Balance: 5 |                   gap: 6,
+Line 314: +0 -0 | Balance: 5 |                   flexWrap: "wrap",
+Line 315: +0 -0 | Balance: 5 |                   padding: "8px 12px 6px",
+Line 316: +0 -0 | Balance: 5 |                   borderBottom: "1px solid var(--c-border)",
+Line 317: +0 -0 | Balance: 5 |                 }}
+Line 318: +0 -0 | Balance: 5 |               >
+Line 319: +0 -0 | Balance: 5 |                 {collectionFiles.map((f) => (
+Line 320: +0 -0 | Balance: 5 |                   <button
+Line 321: +0 -0 | Balance: 5 |                     key={f.id}
+Line 322: +0 -0 | Balance: 5 |                     className="btn"
+Line 323: +0 -0 | Balance: 5 |                     style={{
+Line 324: +0 -0 | Balance: 5 |                       fontSize: 11,
+Line 325: +0 -0 | Balance: 5 |                       padding: "3px 10px",
+Line 326: +0 -0 | Balance: 5 |                       borderRadius: 20,
+Line 327: +0 -0 | Balance: 5 |                       fontWeight: 500,
+Line 328: +0 -0 | Balance: 5 |                       display: "flex",
+Line 329: +0 -0 | Balance: 5 |                       alignItems: "center",
+Line 330: +0 -0 | Balance: 5 |                       gap: 4,
+Line 331: +0 -0 | Balance: 5 |                       maxWidth: 200,
+Line 332: +0 -0 | Balance: 5 |                     }}
+Line 333: +0 -0 | Balance: 5 |                     title={`${f.filename} | Using: ${activeCollectionIndexType === "vector" ? "Vector DB" : "Page Index"}`}
+Line 334: +0 -0 | Balance: 5 |                     onClick={() => openPdfInViewer({ fileId: f.id, page: 0 })}
+Line 335: +0 -0 | Balance: 5 |                   >
+Line 336: +0 -0 | Balance: 5 |                     <FileText size={11} style={{ flexShrink: 0 }} />
+Line 337: +0 -0 | Balance: 5 |                     <span
+Line 338: +0 -0 | Balance: 5 |                       style={{
+Line 339: +0 -0 | Balance: 5 |                         overflow: "hidden",
+Line 340: +0 -0 | Balance: 5 |                         textOverflow: "ellipsis",
+Line 341: +0 -0 | Balance: 5 |                         whiteSpace: "nowrap",
+Line 342: +0 -0 | Balance: 5 |                       }}
+Line 343: +0 -0 | Balance: 5 |                     >
+Line 344: +0 -0 | Balance: 5 |                       {f.filename?.length > 16
+Line 345: +0 -0 | Balance: 5 |                         ? f.filename.slice(0, 16) + "\u2026"
+Line 346: +0 -0 | Balance: 5 |                         : f.filename}
+Line 347: +0 -0 | Balance: 5 |                       {" | "}
+Line 348: +0 -0 | Balance: 5 |                       <span style={{ color: "var(--c-text-secondary)" }}>
+Line 349: +0 -0 | Balance: 5 |                         {activeCollectionIndexType === "vector"
+Line 350: +0 -0 | Balance: 5 |                           ? "Vector"
+Line 351: +0 -0 | Balance: 5 |                           : "Tree"}
+Line 352: +0 -0 | Balance: 5 |                       </span>
+Line 353: +0 -0 | Balance: 5 |                     </span>
+Line 354: +0 -0 | Balance: 5 |                   </button>
+Line 355: +0 -0 | Balance: 5 |                 ))}
+Line 356: +0 -1 | Balance: 4 |               </div>
+Line 357: +0 -0 | Balance: 4 |             )}
+Line 358: +1 -0 | Balance: 5 |             <div className="composerInner">
+Line 359: +1 -0 | Balance: 6 |               <div className="composerTextWrap">
+Line 360: +0 -0 | Balance: 6 |                 <textarea
+Line 361: +0 -0 | Balance: 6 |                   className="composerInput"
+Line 362: +0 -0 | Balance: 6 |                   rows={1}
+Line 363: +0 -0 | Balance: 6 |                   placeholder={
+Line 364: +0 -0 | Balance: 6 |                     mode === "chat"
+Line 365: +0 -0 | Balance: 6 |                       ? "Message your documents..."
+Line 366: +0 -0 | Balance: 6 |                       : mode === "fast"
+Line 367: +0 -0 | Balance: 6 |                         ? "Ask for quick analysis..."
+Line 368: +0 -0 | Balance: 6 |                         : "Ask to compare all pipelines..."
+Line 369: +0 -0 | Balance: 6 |                   }
+Line 370: +0 -0 | Balance: 6 |                   value={question}
+Line 371: +0 -0 | Balance: 6 |                   onChange={(e) => setQuestion(e.target.value)}
+Line 372: +0 -0 | Balance: 6 |                   onKeyDown={(e) => {
+Line 373: +0 -0 | Balance: 6 |                     if (e.key === "Enter" && !e.shiftKey) {
+Line 374: +0 -0 | Balance: 6 |                       e.preventDefault();
+Line 375: +0 -0 | Balance: 6 |                       handleUnifiedQuery();
+Line 376: +0 -0 | Balance: 6 |                     }
+Line 377: +0 -0 | Balance: 6 |                   }}
+Line 378: +0 -0 | Balance: 6 |                   onInput={(e) => {
+Line 379: +0 -0 | Balance: 6 |                     e.target.style.height = "auto";
+Line 380: +0 -0 | Balance: 6 |                     e.target.style.height =
+Line 381: +0 -0 | Balance: 6 |                       Math.min(e.target.scrollHeight, 200) + "px";
+Line 382: +0 -0 | Balance: 6 |                   }}
+Line 383: +0 -0 | Balance: 6 |                 />
+Line 384: +0 -1 | Balance: 5 |               </div>
+Line 385: +1 -0 | Balance: 6 |               <div className="composerActions">
+Line 386: +0 -0 | Balance: 6 |                 <button
+Line 387: +0 -0 | Balance: 6 |                   className="composerBtn"
+Line 388: +0 -0 | Balance: 6 |                   onClick={() => {
+Line 389: +0 -0 | Balance: 6 |                     setForceNewCollection(false);
+Line 390: +0 -0 | Balance: 6 |                     setShowUploadModal(true);
+Line 391: +0 -0 | Balance: 6 |                     setUploadRes(null);
+Line 392: +0 -0 | Balance: 6 |                     setFiles([]);
+Line 393: +0 -0 | Balance: 6 |                   }}
+Line 394: +0 -0 | Balance: 6 |                   title="Add PDFs to this collection"
+Line 395: +0 -0 | Balance: 6 |                   aria-label="Upload"
+Line 396: +0 -0 | Balance: 6 |                 >
+Line 397: +0 -0 | Balance: 6 |                   <Paperclip size={16} />
+Line 398: +0 -0 | Balance: 6 |                 </button>
+Line 399: +0 -0 | Balance: 6 |                 {mode === "chat" && (
+Line 400: +0 -0 | Balance: 6 |                   <>
+Line 401: +0 -0 | Balance: 6 |                     <button
+Line 402: +0 -0 | Balance: 6 |                       className="composerBtn"
+Line 403: +0 -0 | Balance: 6 |                       onClick={fetchChat}
+Line 404: +0 -0 | Balance: 6 |                       disabled={!collectionId}
+Line 405: +0 -0 | Balance: 6 |                       title="Refresh"
+Line 406: +0 -0 | Balance: 6 |                       aria-label="Refresh"
+Line 407: +0 -0 | Balance: 6 |                     >
+Line 408: +0 -0 | Balance: 6 |                       <RefreshCw size={16} />
+Line 409: +0 -0 | Balance: 6 |                     </button>
+Line 410: +0 -0 | Balance: 6 |                     <button
+Line 411: +0 -0 | Balance: 6 |                       className="composerBtn"
+Line 412: +0 -0 | Balance: 6 |                       onClick={() => setClearChatModalOpen(true)}
+Line 413: +0 -0 | Balance: 6 |                       disabled={!collectionId}
+Line 414: +0 -0 | Balance: 6 |                       title="Clear"
+Line 415: +0 -0 | Balance: 6 |                       aria-label="Clear"
+Line 416: +0 -0 | Balance: 6 |                     >
+Line 417: +0 -0 | Balance: 6 |                       <Trash2 size={16} />
+Line 418: +0 -0 | Balance: 6 |                     </button>
+Line 419: +0 -0 | Balance: 6 |                   </>
+Line 420: +0 -0 | Balance: 6 |                 )}
+Line 421: +0 -0 | Balance: 6 |                 {askRes && mode !== "chat" && (
+Line 422: +0 -0 | Balance: 6 |                   <button
+Line 423: +0 -0 | Balance: 6 |                     className={`composerBtn ${showDashboard ? "active" : ""}`}
+Line 424: +0 -0 | Balance: 6 |                     onClick={() => setShowDashboard((s) => !s)}
+Line 425: +0 -0 | Balance: 6 |                     title="Results"
+Line 426: +0 -0 | Balance: 6 |                     aria-label="Results"
+Line 427: +0 -0 | Balance: 6 |                   >
+Line 428: +0 -0 | Balance: 6 |                     <BarChart3 size={16} />
+Line 429: +0 -0 | Balance: 6 |                   </button>
+Line 430: +0 -0 | Balance: 6 |                 )}
+Line 431: +0 -0 | Balance: 6 |                 {indexMissing && (
+Line 432: +0 -0 | Balance: 6 |                   <button
+Line 433: +0 -0 | Balance: 6 |                     className="composerBtn"
+Line 434: +0 -0 | Balance: 6 |                     onClick={rebuildIndex}
+Line 435: +0 -0 | Balance: 6 |                     disabled={rebuildingIndex}
+Line 436: +0 -0 | Balance: 6 |                     title="Rebuild"
+Line 437: +0 -0 | Balance: 6 |                     aria-label="Rebuild"
+Line 438: +0 -0 | Balance: 6 |                   >
+Line 439: +0 -0 | Balance: 6 |                     {rebuildingIndex ? (
+Line 440: +0 -0 | Balance: 6 |                       <span className="btnSpinner" />
+Line 441: +0 -0 | Balance: 6 |                     ) : (
+Line 442: +0 -0 | Balance: 6 |                       <Wrench size={16} />
+Line 443: +0 -0 | Balance: 6 |                     )}
+Line 444: +0 -0 | Balance: 6 |                   </button>
+Line 445: +0 -0 | Balance: 6 |                 )}
+Line 446: +0 -0 | Balance: 6 |                 {collectionId && collectionFiles.length > 0 && (
+Line 447: +0 -0 | Balance: 6 |                   <button
+Line 448: +0 -0 | Balance: 6 |                     className={`composerBtn ${showDocBar ? "active" : ""}`}
+Line 449: +0 -0 | Balance: 6 |                     onClick={() => setShowDocBar((s) => !s)}
+Line 450: +0 -0 | Balance: 6 |                     title={`${collectionFiles.length} document${collectionFiles.length !== 1 ? "s" : ""} in this collection`}
+Line 451: +0 -0 | Balance: 6 |                     aria-label="Toggle document list"
+Line 452: +0 -0 | Balance: 6 |                   >
+Line 453: +0 -0 | Balance: 6 |                     <FileText size={16} />
+Line 454: +0 -0 | Balance: 6 |                     <span
+Line 455: +0 -0 | Balance: 6 |                       style={{
+Line 456: +0 -0 | Balance: 6 |                         fontSize: 10,
+Line 457: +0 -0 | Balance: 6 |                         marginLeft: 3,
+Line 458: +0 -0 | Balance: 6 |                         fontWeight: 600,
+Line 459: +0 -0 | Balance: 6 |                         lineHeight: 1,
+Line 460: +0 -0 | Balance: 6 |                       }}
+Line 461: +0 -0 | Balance: 6 |                     >
+Line 462: +0 -0 | Balance: 6 |                       {collectionFiles.length}
+Line 463: +0 -0 | Balance: 6 |                     </span>
+Line 464: +0 -0 | Balance: 6 |                   </button>
+Line 465: +0 -0 | Balance: 6 |                 )}
+Line 466: +0 -0 | Balance: 6 |                 
+Line 467: +1 -0 | Balance: 7 |                 <div className="modeMenuWrap" ref={modeMenuRef}>
+Line 468: +0 -0 | Balance: 7 |                   <button
+Line 469: +0 -0 | Balance: 7 |                     className="modeSelector"
+Line 470: +0 -0 | Balance: 7 |                     onClick={() => setModeMenuOpen((o) => !o)}
+Line 471: +0 -0 | Balance: 7 |                     title="Switch mode"
+Line 472: +0 -0 | Balance: 7 |                   >
+Line 473: +0 -0 | Balance: 7 |                     <span className="modeIcon">
+Line 474: +0 -0 | Balance: 7 |                       {mode === "chat" ? (
+Line 475: +0 -0 | Balance: 7 |                         <MessageSquare size={14} />
+Line 476: +0 -0 | Balance: 7 |                       ) : mode === "fast" ? (
+Line 477: +0 -0 | Balance: 7 |                         <Zap size={14} />
+Line 478: +0 -0 | Balance: 7 |                       ) : (
+Line 479: +0 -0 | Balance: 7 |                         <FlaskConical size={14} />
+Line 480: +0 -0 | Balance: 7 |                       )}
+Line 481: +0 -0 | Balance: 7 |                     </span>
+Line 482: +0 -0 | Balance: 7 |                     <span className="modeName">
+Line 483: +0 -0 | Balance: 7 |                       {mode === "chat"
+Line 484: +0 -0 | Balance: 7 |                         ? "Chat"
+Line 485: +0 -0 | Balance: 7 |                         : mode === "fast"
+Line 486: +0 -0 | Balance: 7 |                           ? "Fast"
+Line 487: +0 -0 | Balance: 7 |                           : "Compare"}
+Line 488: +0 -0 | Balance: 7 |                     </span>
+Line 489: +0 -0 | Balance: 7 |                     <span className="modeChevron">▾</span>
+Line 490: +0 -0 | Balance: 7 |                   </button>
+Line 491: +0 -0 | Balance: 7 |                   {modeMenuOpen && (
+Line 492: +1 -0 | Balance: 8 |                     <div className="modeMenu">
+Line 493: +0 -0 | Balance: 8 |                       {[
+Line 494: +0 -0 | Balance: 8 |                         {
+Line 495: +0 -0 | Balance: 8 |                           key: "chat",
+Line 496: +0 -0 | Balance: 8 |                           icon: <MessageSquare size={14} />,
+Line 497: +0 -0 | Balance: 8 |                           label: "Chat",
+Line 498: +0 -0 | Balance: 8 |                           desc: "Streaming conversation",
+Line 499: +0 -0 | Balance: 8 |                         },
+Line 500: +0 -0 | Balance: 8 |                         {
+Line 501: +0 -0 | Balance: 8 |                           key: "fast",
+Line 502: +0 -0 | Balance: 8 |                           icon: <Zap size={14} />,
+Line 503: +0 -0 | Balance: 8 |                           label: "Fast",
+Line 504: +0 -0 | Balance: 8 |                           desc: "Quick single-pipeline answer",
+Line 505: +0 -0 | Balance: 8 |                         },
+Line 506: +0 -0 | Balance: 8 |                         {
+Line 507: +0 -0 | Balance: 8 |                           key: "compare",
+Line 508: +0 -0 | Balance: 8 |                           icon: <FlaskConical size={14} />,
+Line 509: +0 -0 | Balance: 8 |                           label: "Compare",
+Line 510: +0 -0 | Balance: 8 |                           desc: "Compare all 4 pipelines",
+Line 511: +0 -0 | Balance: 8 |                         },
+Line 512: +0 -0 | Balance: 8 |                       ].map(({ key, icon, label, desc }) => (
+Line 513: +0 -0 | Balance: 8 |                         <button
+Line 514: +0 -0 | Balance: 8 |                           key={key}
+Line 515: +0 -0 | Balance: 8 |                           className={`modeMenuItem ${mode === key ? "active" : ""}`}
+Line 516: +0 -0 | Balance: 8 |                           onClick={() => {
+Line 517: +0 -0 | Balance: 8 |                             setMode(key);
+Line 518: +0 -0 | Balance: 8 |                             setModeMenuOpen(false);
+Line 519: +0 -0 | Balance: 8 |                           }}
+Line 520: +0 -0 | Balance: 8 |                         >
+Line 521: +0 -0 | Balance: 8 |                           <span className="modeMenuIcon">{icon}</span>
+Line 522: +0 -0 | Balance: 8 |                           <span className="modeMenuText">
+Line 523: +0 -0 | Balance: 8 |                             <span className="modeMenuLabel">{label}</span>
+Line 524: +0 -0 | Balance: 8 |                             <span className="modeMenuDesc">{desc}</span>
+Line 525: +0 -0 | Balance: 8 |                           </span>
+Line 526: +0 -0 | Balance: 8 |                           {mode === key && (
+Line 527: +0 -0 | Balance: 8 |                             <span className="modeMenuCheck">✓</span>
+Line 528: +0 -0 | Balance: 8 |                           )}
+Line 529: +0 -0 | Balance: 8 |                         </button>
+Line 530: +0 -0 | Balance: 8 |                       ))}
+Line 531: +0 -1 | Balance: 7 |                     </div>
+Line 532: +0 -0 | Balance: 7 |                   )}
+Line 533: +0 -1 | Balance: 6 |                 </div>
+Line 534: +0 -0 | Balance: 6 |                 <button
+Line 535: +0 -0 | Balance: 6 |                   className="sendBtn"
+Line 536: +0 -0 | Balance: 6 |                   onClick={handleUnifiedQuery}
+Line 537: +0 -0 | Balance: 6 |                   disabled={
+Line 538: +0 -0 | Balance: 6 |                     !user ||
+Line 539: +0 -0 | Balance: 6 |                     (mode !== "image" && !collectionId) ||
+Line 540: +0 -0 | Balance: 6 |                     asking ||
+Line 541: +0 -0 | Balance: 6 |                     chatLoading ||
+Line 542: +0 -0 | Balance: 6 |                     (mode !== "image" && !question.trim())
+Line 543: +0 -0 | Balance: 6 |                   }
+Line 544: +0 -0 | Balance: 6 |                   title="Send"
+Line 545: +0 -0 | Balance: 6 |                   aria-label="Send"
+Line 546: +0 -0 | Balance: 6 |                 >
+Line 547: +0 -0 | Balance: 6 |                   {asking || chatLoading ? (
+Line 548: +0 -0 | Balance: 6 |                     <span className="btnSpinner light" />
+Line 549: +0 -0 | Balance: 6 |                   ) : (
+Line 550: +0 -0 | Balance: 6 |                     <ArrowUp size={18} />
+Line 551: +0 -0 | Balance: 6 |                   )}
+Line 552: +0 -0 | Balance: 6 |                 </button>
+Line 553: +0 -1 | Balance: 5 |               </div>
+Line 554: +0 -1 | Balance: 4 |             </div>
+Line 555: +0 -1 | Balance: 3 |           </div>
+Line 556: +0 -0 | Balance: 3 |           {(asking || chatLoading) && (
+Line 557: +1 -0 | Balance: 4 |             <div
+Line 558: +0 -0 | Balance: 4 |               className="timerBadge"
+Line 559: +0 -0 | Balance: 4 |               style={{ textAlign: "center", padding: "4px 0" }}
+Line 560: +0 -0 | Balance: 4 |             >
+Line 561: +0 -0 | Balance: 4 |               Thinking... {queryElapsed}s
+Line 562: +0 -1 | Balance: 3 |             </div>
+Line 563: +0 -0 | Balance: 3 |           )}
+Line 564: +0 -1 | Balance: 2 |         </div>
+Line 565: +0 -0 | Balance: 2 |   );
+Line 566: +0 -0 | Balance: 2 | 
+Line 567: +0 -0 | Balance: 2 |   /* ── Pipeline Config Panel ── */
+Line 568: +0 -0 | Balance: 2 |   

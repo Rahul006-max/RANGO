@@ -1,0 +1,201 @@
+>   const ChatThreadView = () => (
+      <div
+        style={{ display: "flex", flex: 1, overflow: "hidden", width: "100%" }}
+      >
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            flex: 1,
+            minWidth: 300,
+            position: "relative",
+            overflow: "hidden",
+          }}
+        >
+          <div className="threadViewport" id="threadViewport" ref={threadRef}>
+            <div className="threadInner">
+              {mode === "chat" &&
+                chatMessages.length === 0 &&
+                chatHistoryLoading && (
+                  <div
+                    style={{
+                      padding: "24px 16px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 12,
+                    }}
+                  >
+                    {[0, 1, 2].map((i) => (
+                      <div
+                        key={i}
+                        style={{
+                          display: "flex",
+                          flexDirection: i % 2 === 0 ? "row" : "row-reverse",
+                          gap: 10,
+                          alignItems: "flex-start",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: "50%",
+                            background: "var(--c-border)",
+                            flexShrink: 0,
+                          }}
+                        />
+                        <div
+                          style={{
+                            height: 14,
+                            background: "var(--c-border)",
+                            borderRadius: 6,
+                            width: i === 1 ? "55%" : "72%",
+                            opacity: 0.5,
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              {mode === "chat" &&
+                chatMessages.length === 0 &&
+                !askRes &&
+                !chatHistoryLoading && (
+                  <div className="emptyThread">
+                    <div className="emptyIcon">
+                      <MessageSquare size={40} />
+                    </div>
+                    <div>Start a conversation with your documents</div>
+                    <div className="mini">
+                      Select a collection and type a message below
+                    </div>
+                  </div>
+                )}
+              {mode !== "chat" && !askRes && (
+                <div className="emptyThread">
+                  <div className="emptyIcon">
+                    {mode === "fast" ? (
+                      <Zap size={40} />
+                    ) : (
+                      <FlaskConical size={40} />
+                    )}
+                  </div>
+                  <div>
+                    {mode === "fast"
+                      ? "Fast Analysis Mode"
+                      : "Pipeline Compare Mode"}
+                  </div>
+                  <div className="mini">
+                    Ask a question to analyze your documents
+                  </div>
+                </div>
+              )}
+              {mode === "chat" && chatMessages.length > chatDisplayLimit && (
+                <div style={{ textAlign: "center", padding: "8px 0" }}>
+                  <button
+                    className="btn"
+                    style={{ fontSize: 12 }}
+                    onClick={() => setChatDisplayLimit((l) => l + 40)}
+                  >
+                    Load {Math.min(40, chatMessages.length - chatDisplayLimit)}{" "}
+                    earlier messages
+                  </button>
+                </div>
+              )}
+              {mode === "chat" &&
+                chatMessages.slice(-chatDisplayLimit).map((m, i) => (
+                  <div key={i}>
+                    <div
+                      className={`msgRow ${m.role === "user" ? "user" : "assistant"}`}
+                    >
+                      {m.role === "assistant" && (
+                        <div className="msgAvatar ai">AI</div>
+                      )}
+                      <div
+                        className={`msgBubble ${m.role === "user" ? "user" : "assistant"}`}
+                      >
+                        {m.role === "assistant" && m.message ? (
+                          <>
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                              {m.message}
+                            </ReactMarkdown>
+                            <button
+                              className="copyBtn"
+                              onClick={() => copyToClipboard(m.message)}
+                              title="Copy"
+                            >
+                              <Copy size={12} /> Copy
+                            </button>
+                          </>
+                        ) : (
+                          m.message ||
+                          (chatLoading && i === chatMessages.length - 1 ? (
+                            <span style={{ opacity: 0.5 }}>Thinking...</span>
+                          ) : (
+                            ""
+                          ))
+                        )}
+                      </div>
+                      {m.role === "user" && (
+                        <div className="msgAvatar human">
+                          {user?.email?.[0]?.toUpperCase() || "U"}
+                        </div>
+                      )}
+                    </div>
+                    {m.role === "assistant" && chatAnalytics[i] && (
+                      <div className="msgMeta">
+                        <Zap size={11} />
+                        <span>{chatAnalytics[i].pipeline}</span>
+                        <span>·</span>
+                        <span>{chatAnalytics[i].latency_ms} ms</span>
+                        <span>·</span>
+                        <span>{chatAnalytics[i].docs_retrieved} docs</span>
+                        {chatAnalytics[i].smart_extract && (
+                          <>
+                            <span>·</span>
+                            <span>smart extract</span>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              {mode !== "chat" &&
+                fastHistory
+                  .filter((entry) => entry.mode === mode)
+                  .map((entry, idx) => (
+                    <Fragment key={entry.id || idx}>
+                      <div className="msgRow user">
+                        <div className="msgBubble user">{entry.question}</div>
+                        <div className="msgAvatar human">
+                          {user?.email?.[0]?.toUpperCase() || "U"}
+                        </div>
+                      </div>
+                      <div className="msgRow assistant">
+                        <div className="msgAvatar ai">AI</div>
+                        <div className="msgBubble assistant">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {entry.answer}
+                          </ReactMarkdown>
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: "8px",
+                              marginTop: "6px",
+                            }}
+                          >
+                            <button
+                              className="copyBtn"
+                              onClick={() => copyToClipboard(entry.answer)}
+                              title="Copy"
+                            >
+                              <Copy size={12} /> Copy
+                            </button>
+                            {(entry.metrics || entry.retrieval_comparison) && (
+                              <button
+                                className="copyBtn"
+                                onClick={() => {
+                                  setAskRes({
+                                    final_answer: entry.answer,
+                                    best_pipeline: entry.best_pipeline,
+                                    metrics: entry.metrics || {},
