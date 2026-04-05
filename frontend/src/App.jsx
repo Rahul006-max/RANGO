@@ -18,6 +18,7 @@ import { FastModeResults } from "./components/FastModeResults";
 import { CompareModeResults } from "./components/CompareModeResults";
 import { DetailedMetricsPanel } from "./components/DetailedMetricsPanel";
 import { About } from "./pages/About";
+import { Documentation } from "./pages/Documentation";
 
 import {
   Chart as ChartJS,
@@ -203,6 +204,7 @@ export default function App() {
   // Toast replaces old error state — kept for minor internal use only
   const [error, setError] = useState("");
   const [showAbout, setShowAbout] = useState(false); // Show about page instead of login
+  const [showDocumentation, setShowDocumentation] = useState(false); // Show documentation page
 
   // ✅ MODE
   const [mode, setMode] = useState("chat"); // chat | fast | compare | image
@@ -5088,6 +5090,11 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
     return <About onBack={() => setShowAbout(false)} />;
   }
 
+  // Show documentation page if requested
+  if (showDocumentation) {
+    return <Documentation onBack={() => setShowDocumentation(false)} />;
+  }
+
   // Auth gate — must sign in
   if (!user) {
     return (
@@ -5345,9 +5352,24 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
               >
                 GitHub
               </a>
-              <a href="#" style={{ color: "#9CA3AF", textDecoration: "none" }}>
+              <button 
+                onClick={() => setShowDocumentation(true)}
+                style={{ 
+                  background: "none", 
+                  border: "none", 
+                  color: "#9CA3AF", 
+                  cursor: "pointer", 
+                  fontSize: "12px",
+                  fontWeight: 500,
+                  padding: "0",
+                  fontFamily: "inherit",
+                  textDecoration: "none",
+                }}
+                onMouseOver={(e) => e.target.style.color = "#fff"}
+                onMouseOut={(e) => e.target.style.color = "#9CA3AF"}
+              >
                 Documentation
-              </a>
+              </button>
               <button 
                 onClick={() => setShowAbout(true)}
                 style={{ 
