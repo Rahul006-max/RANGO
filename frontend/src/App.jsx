@@ -17,6 +17,7 @@ import Silk from "./components/Silk";
 import { FastModeResults } from "./components/FastModeResults";
 import { CompareModeResults } from "./components/CompareModeResults";
 import { DetailedMetricsPanel } from "./components/DetailedMetricsPanel";
+import { About } from "./pages/About";
 
 import {
   Chart as ChartJS,
@@ -201,6 +202,7 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
   // Toast replaces old error state — kept for minor internal use only
   const [error, setError] = useState("");
+  const [showAbout, setShowAbout] = useState(false); // Show about page instead of login
 
   // ✅ MODE
   const [mode, setMode] = useState("chat"); // chat | fast | compare | image
@@ -5081,6 +5083,11 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
     );
   }
 
+  // Show about page if requested
+  if (showAbout) {
+    return <About onBack={() => setShowAbout(false)} />;
+  }
+
   // Auth gate — must sign in
   if (!user) {
     return (
@@ -5328,15 +5335,37 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
                 fontWeight: 500,
               }}
             >
-              <a href="#" style={{ color: "#9CA3AF", textDecoration: "none" }}>
+              <a 
+                href="https://github.com/Rahul006-max/RANGO" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                style={{ color: "#9CA3AF", textDecoration: "none", cursor: "pointer" }}
+                onMouseOver={(e) => e.target.style.color = "#fff"}
+                onMouseOut={(e) => e.target.style.color = "#9CA3AF"}
+              >
                 GitHub
               </a>
               <a href="#" style={{ color: "#9CA3AF", textDecoration: "none" }}>
                 Documentation
               </a>
-              <a href="#" style={{ color: "#9CA3AF", textDecoration: "none" }}>
+              <button 
+                onClick={() => setShowAbout(true)}
+                style={{ 
+                  background: "none", 
+                  border: "none", 
+                  color: "#9CA3AF", 
+                  cursor: "pointer", 
+                  fontSize: "12px",
+                  fontWeight: 500,
+                  padding: "0",
+                  fontFamily: "inherit",
+                  textDecoration: "none",
+                }}
+                onMouseOver={(e) => e.target.style.color = "#fff"}
+                onMouseOut={(e) => e.target.style.color = "#9CA3AF"}
+              >
                 About
-              </a>
+              </button>
             </div>
           </div>
         </div>
