@@ -155,41 +155,101 @@ body::before {
    =================================== */
 
 /* Spacing utilities */
-.gap-8 { gap: 8px; }
-.gap-12 { gap: 12px; }
-.gap-16 { gap: 16px; }
-.gap-20 { gap: 20px; }
-.gap-24 { gap: 24px; }
-.gap-28 { gap: 28px; }
-.gap-32 { gap: 32px; }
+.gap-8 {
+  gap: 8px;
+}
+.gap-12 {
+  gap: 12px;
+}
+.gap-16 {
+  gap: 16px;
+}
+.gap-20 {
+  gap: 20px;
+}
+.gap-24 {
+  gap: 24px;
+}
+.gap-28 {
+  gap: 28px;
+}
+.gap-32 {
+  gap: 32px;
+}
 
-.mt-8 { margin-top: 8px; }
-.mt-12 { margin-top: 12px; }
-.mt-16 { margin-top: 16px; }
-.mt-20 { margin-top: 20px; }
-.mt-24 { margin-top: 24px; }
-.mt-28 { margin-top: 28px; }
-.mt-32 { margin-top: 32px; }
+.mt-8 {
+  margin-top: 8px;
+}
+.mt-12 {
+  margin-top: 12px;
+}
+.mt-16 {
+  margin-top: 16px;
+}
+.mt-20 {
+  margin-top: 20px;
+}
+.mt-24 {
+  margin-top: 24px;
+}
+.mt-28 {
+  margin-top: 28px;
+}
+.mt-32 {
+  margin-top: 32px;
+}
 
-.mb-8 { margin-bottom: 8px; }
-.mb-12 { margin-bottom: 12px; }
-.mb-16 { margin-bottom: 16px; }
-.mb-20 { margin-bottom: 20px; }
-.mb-24 { margin-bottom: 24px; }
-.mb-28 { margin-bottom: 28px; }
-.mb-32 { margin-bottom: 32px; }
+.mb-8 {
+  margin-bottom: 8px;
+}
+.mb-12 {
+  margin-bottom: 12px;
+}
+.mb-16 {
+  margin-bottom: 16px;
+}
+.mb-20 {
+  margin-bottom: 20px;
+}
+.mb-24 {
+  margin-bottom: 24px;
+}
+.mb-28 {
+  margin-bottom: 28px;
+}
+.mb-32 {
+  margin-bottom: 32px;
+}
 
-.p-8 { padding: 8px; }
-.p-12 { padding: 12px; }
-.p-16 { padding: 16px; }
-.p-20 { padding: 20px; }
-.p-24 { padding: 24px; }
-.p-28 { padding: 28px; }
+.p-8 {
+  padding: 8px;
+}
+.p-12 {
+  padding: 12px;
+}
+.p-16 {
+  padding: 16px;
+}
+.p-20 {
+  padding: 20px;
+}
+.p-24 {
+  padding: 24px;
+}
+.p-28 {
+  padding: 28px;
+}
 
 /* Text utilities */
-.text-center { text-align: center; }
-.text-accent { color: var(--c-accent); }
-.text-muted { color: var(--c-muted); }
+.text-center {
+  text-align: center;
+}
+.text-accent {
+  color: var(--c-accent);
+}
+.text-muted {
+  color: var(--c-muted);
+}
 
 /* Button utilities */
 .btn-primary {
@@ -210,8 +270,12 @@ body::before {
 }
 
 /* Card utilities */
-.card-shadow { box-shadow: var(--shadow-sm); }
-.card-shadow:hover { box-shadow: var(--shadow-md); }
+.card-shadow {
+  box-shadow: var(--shadow-sm);
+}
+.card-shadow:hover {
+  box-shadow: var(--shadow-md);
+}
 
 /* ===================================
    SHELL LAYOUT

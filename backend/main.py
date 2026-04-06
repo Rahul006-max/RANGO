@@ -74,10 +74,18 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# Define allowed origins
+origins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "https://rango-ruddy.vercel.app",
+    "https://rango-er7c.onrender.com"
+]
+
 # Add CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

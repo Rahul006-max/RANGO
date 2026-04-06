@@ -8,5 +8,6 @@ try {
   root.render(<App />);
 } catch (error) {
   console.error("Failed to render app:", error);
-  document.getElementById("root").innerHTML = `<h1>Error: ${error.message}</h1><pre>${error.stack}</pre>`;
+  document.getElementById("root").innerHTML =
+    `<h1>Error: ${error.message}</h1><pre>${error.stack}</pre>`;
 }

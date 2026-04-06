@@ -58,7 +58,13 @@ export const Documentation = ({ onBack }) => {
         }}
       >
         {/* Header */}
-        <div style={{ marginBottom: "60px", paddingBottom: "40px", borderBottom: "3px solid #fff" }}>
+        <div
+          style={{
+            marginBottom: "60px",
+            paddingBottom: "40px",
+            borderBottom: "3px solid #fff",
+          }}
+        >
           <h1
             style={{
               fontSize: "72px",
@@ -133,7 +139,14 @@ export const Documentation = ({ onBack }) => {
         </div>
 
         {/* Content Sections */}
-        <div style={{ marginTop: "60px", display: "grid", gridTemplateColumns: "1fr", gap: "60px" }}>
+        <div
+          style={{
+            marginTop: "60px",
+            display: "grid",
+            gridTemplateColumns: "1fr",
+            gap: "60px",
+          }}
+        >
           {/* Getting Started */}
           <section>
             <h3
@@ -149,9 +162,13 @@ export const Documentation = ({ onBack }) => {
             >
               1. GETTING STARTED
             </h3>
-            <div style={{ fontSize: "14px", lineHeight: 1.8, color: "#d0d0d0" }}>
+            <div
+              style={{ fontSize: "14px", lineHeight: 1.8, color: "#d0d0d0" }}
+            >
               <p style={{ margin: "0 0 15px 0" }}>
-                Sign in with your Google account to access RANGO. Once authenticated, you'll see the main dashboard with collections and mode options.
+                Sign in with your Google account to access RANGO. Once
+                authenticated, you'll see the main dashboard with collections
+                and mode options.
               </p>
               <p style={{ margin: "0 0 15px 0" }}>
                 <strong>First Steps:</strong>
@@ -180,12 +197,16 @@ export const Documentation = ({ onBack }) => {
             >
               2. AUTHENTICATION
             </h3>
-            <div style={{ fontSize: "14px", lineHeight: 1.8, color: "#d0d0d0" }}>
+            <div
+              style={{ fontSize: "14px", lineHeight: 1.8, color: "#d0d0d0" }}
+            >
               <p style={{ margin: "0 0 15px 0" }}>
-                RANGO uses OAuth 2.0 with Google Sign-In for authentication. Your session is automatically managed and refreshed.
+                RANGO uses OAuth 2.0 with Google Sign-In for authentication.
+                Your session is automatically managed and refreshed.
               </p>
               <p style={{ margin: "0 0 15px 0" }}>
-                Sessions expire after 60 minutes of inactivity. The system automatically refreshes your token if it's about to expire.
+                Sessions expire after 60 minutes of inactivity. The system
+                automatically refreshes your token if it's about to expire.
               </p>
             </div>
           </section>
@@ -205,9 +226,12 @@ export const Documentation = ({ onBack }) => {
             >
               4. CHAT MODE
             </h3>
-            <div style={{ fontSize: "14px", lineHeight: 1.8, color: "#d0d0d0" }}>
+            <div
+              style={{ fontSize: "14px", lineHeight: 1.8, color: "#d0d0d0" }}
+            >
               <p style={{ margin: "0 0 15px 0" }}>
-                Chat with your documents using natural language. The system retrieves relevant context and generates answers.
+                Chat with your documents using natural language. The system
+                retrieves relevant context and generates answers.
               </p>
               <p style={{ margin: "0 0 15px 0" }}>
                 <strong>Features:</strong>
@@ -237,12 +261,17 @@ export const Documentation = ({ onBack }) => {
             >
               5. FAST MODE
             </h3>
-            <div style={{ fontSize: "14px", lineHeight: 1.8, color: "#d0d0d0" }}>
+            <div
+              style={{ fontSize: "14px", lineHeight: 1.8, color: "#d0d0d0" }}
+            >
               <p style={{ margin: "0 0 15px 0" }}>
-                Get quick, single-pipeline answers optimized for speed. Fast Mode executes your query across a single best-performing pipeline.
+                Get quick, single-pipeline answers optimized for speed. Fast
+                Mode executes your query across a single best-performing
+                pipeline.
               </p>
               <p style={{ margin: "0 0 15px 0" }}>
-                Useful for production scenarios where you need consistent, fast responses. Displays answer, latency, sources, and cost metrics.
+                Useful for production scenarios where you need consistent, fast
+                responses. Displays answer, latency, sources, and cost metrics.
               </p>
             </div>
           </section>
@@ -262,9 +291,13 @@ export const Documentation = ({ onBack }) => {
             >
               6. COMPARE MODE
             </h3>
-            <div style={{ fontSize: "14px", lineHeight: 1.8, color: "#d0d0d0" }}>
+            <div
+              style={{ fontSize: "14px", lineHeight: 1.8, color: "#d0d0d0" }}
+            >
               <p style={{ margin: "0 0 15px 0" }}>
-                Compare side-by-side results from multiple RAG pipelines. See how different retrieval strategies, chunk sizes, and models perform.
+                Compare side-by-side results from multiple RAG pipelines. See
+                how different retrieval strategies, chunk sizes, and models
+                perform.
               </p>
               <p style={{ margin: "0 0 15px 0" }}>
                 <strong>Compare Mode Shows:</strong>
@@ -296,12 +329,16 @@ export const Documentation = ({ onBack }) => {
             >
               7. IMAGE ANALYSIS
             </h3>
-            <div style={{ fontSize: "14px", lineHeight: 1.8, color: "#d0d0d0" }}>
+            <div
+              style={{ fontSize: "14px", lineHeight: 1.8, color: "#d0d0d0" }}
+            >
               <p style={{ margin: "0 0 15px 0" }}>
-                Upload images and ask questions about their content. RANGO supports vision models for comprehensive image understanding.
+                Upload images and ask questions about their content. RANGO
+                supports vision models for comprehensive image understanding.
               </p>
               <p style={{ margin: "0 0 15px 0" }}>
-                Displays confidence scores, extracted descriptions, and detailed analysis of image content.
+                Displays confidence scores, extracted descriptions, and detailed
+                analysis of image content.
               </p>
             </div>
           </section>
@@ -321,21 +358,28 @@ export const Documentation = ({ onBack }) => {
             >
               9. KEY METRICS
             </h3>
-            <div style={{ fontSize: "14px", lineHeight: 1.8, color: "#d0d0d0" }}>
+            <div
+              style={{ fontSize: "14px", lineHeight: 1.8, color: "#d0d0d0" }}
+            >
               <p style={{ margin: "0 0 15px 0" }}>
-                <strong>Latency:</strong> Total time from query to answer (includes embedding, retrieval, reranking, LLM, extraction)
+                <strong>Latency:</strong> Total time from query to answer
+                (includes embedding, retrieval, reranking, LLM, extraction)
               </p>
               <p style={{ margin: "0 0 15px 0" }}>
-                <strong>Quality Score:</strong> LLM-judged measure of answer quality (0-10 scale)
+                <strong>Quality Score:</strong> LLM-judged measure of answer
+                quality (0-10 scale)
               </p>
               <p style={{ margin: "0 0 15px 0" }}>
-                <strong>Cost:</strong> USD cost for LLM tokens (prompt + completion tokens)
+                <strong>Cost:</strong> USD cost for LLM tokens (prompt +
+                completion tokens)
               </p>
               <p style={{ margin: "0 0 15px 0" }}>
-                <strong>Retrieval Score:</strong> Relevance of retrieved documents to query (0-10 scale)
+                <strong>Retrieval Score:</strong> Relevance of retrieved
+                documents to query (0-10 scale)
               </p>
               <p style={{ margin: "0" }}>
-                <strong>Sources:</strong> Number of documents retrieved and used for context
+                <strong>Sources:</strong> Number of documents retrieved and used
+                for context
               </p>
             </div>
           </section>
@@ -355,13 +399,20 @@ export const Documentation = ({ onBack }) => {
             >
               10. PERFORMANCE TIPS
             </h3>
-            <div style={{ fontSize: "14px", lineHeight: 1.8, color: "#d0d0d0" }}>
+            <div
+              style={{ fontSize: "14px", lineHeight: 1.8, color: "#d0d0d0" }}
+            >
               <ul style={{ margin: "0", paddingLeft: "20px" }}>
                 <li>Smaller chunk sizes (256-512) for focused answers</li>
                 <li>Larger chunk sizes (1024-2048) for context retention</li>
-                <li>Use reranking for better relevance at the cost of latency</li>
+                <li>
+                  Use reranking for better relevance at the cost of latency
+                </li>
                 <li>Adjust top-k (typically 5-20) based on document quality</li>
-                <li>Batch evaluate multiple queries to compare pipelines statistically</li>
+                <li>
+                  Batch evaluate multiple queries to compare pipelines
+                  statistically
+                </li>
                 <li>Monitor cost vs quality trade-offs for your use case</li>
               </ul>
             </div>
@@ -382,26 +433,37 @@ export const Documentation = ({ onBack }) => {
             >
               12. FAQ
             </h3>
-            <div style={{ fontSize: "14px", lineHeight: 1.8, color: "#d0d0d0" }}>
+            <div
+              style={{ fontSize: "14px", lineHeight: 1.8, color: "#d0d0d0" }}
+            >
               <p style={{ margin: "0 0 15px 0" }}>
                 <strong>Q: What file formats are supported?</strong>
-                <br />A: PDF, TXT, DOCX, XLSX, JSON, and other text-based formats.
+                <br />
+                A: PDF, TXT, DOCX, XLSX, JSON, and other text-based formats.
               </p>
               <p style={{ margin: "0 0 15px 0" }}>
                 <strong>Q: How many documents can I upload?</strong>
-                <br />A: No hard limit. Performance depends on collection size and retrieval method.
+                <br />
+                A: No hard limit. Performance depends on collection size and
+                retrieval method.
               </p>
               <p style={{ margin: "0 0 15px 0" }}>
                 <strong>Q: Can I export results?</strong>
-                <br />A: Yes. Use the Download button to export chat history and metrics as PDF.
+                <br />
+                A: Yes. Use the Download button to export chat history and
+                metrics as PDF.
               </p>
               <p style={{ margin: "0 0 15px 0" }}>
                 <strong>Q: How do I compare two pipelines?</strong>
-                <br />A: Use Compare Mode to run the same query across multiple pipelines side-by-side.
+                <br />
+                A: Use Compare Mode to run the same query across multiple
+                pipelines side-by-side.
               </p>
               <p style={{ margin: "0" }}>
                 <strong>Q: What is vector reranking?</strong>
-                <br />A: A secondary ranking pass that scores retrieved documents for relevance, improving quality at the cost of latency.
+                <br />
+                A: A secondary ranking pass that scores retrieved documents for
+                relevance, improving quality at the cost of latency.
               </p>
             </div>
           </section>
@@ -434,8 +496,12 @@ export const Documentation = ({ onBack }) => {
             >
               NEED HELP?
             </h4>
-            <p style={{ margin: "10px 0" }}>Check the GitHub repository issues section for common problems.</p>
-            <p style={{ margin: "0" }}>Community support available through discussions.</p>
+            <p style={{ margin: "10px 0" }}>
+              Check the GitHub repository issues section for common problems.
+            </p>
+            <p style={{ margin: "0" }}>
+              Community support available through discussions.
+            </p>
           </div>
 
           <div>
@@ -453,9 +519,19 @@ export const Documentation = ({ onBack }) => {
               RESOURCES
             </h4>
             <p style={{ margin: "10px 0" }}>
-              GitHub: <a href="https://github.com/Rahul006-max/RANGO" target="_blank" rel="noopener noreferrer" style={{ color: "#fff", textDecoration: "underline" }}>github.com/Rahul006-max/RANGO</a>
+              GitHub:{" "}
+              <a
+                href="https://github.com/Rahul006-max/RANGO"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: "#fff", textDecoration: "underline" }}
+              >
+                github.com/Rahul006-max/RANGO
+              </a>
             </p>
-            <p style={{ margin: "0" }}>API docs available in repository /docs folder.</p>
+            <p style={{ margin: "0" }}>
+              API docs available in repository /docs folder.
+            </p>
           </div>
         </div>
       </div>

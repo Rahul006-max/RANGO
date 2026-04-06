@@ -58,7 +58,13 @@ export const About = ({ onBack }) => {
         }}
       >
         {/* Header */}
-        <div style={{ margibottom: "60px", paddingBottom: "40px", borderBottom: "3px solid #fff" }}>
+        <div
+          style={{
+            margibottom: "60px",
+            paddingBottom: "40px",
+            borderBottom: "3px solid #fff",
+          }}
+        >
           <h1
             style={{
               fontSize: "72px",
@@ -119,8 +125,9 @@ export const About = ({ onBack }) => {
                   fontWeight: 400,
                 }}
               >
-                RANGO is a comprehensive RAG (Retrieval-Augmented Generation) pipeline optimization framework.
-                Benchmark, evaluate, and optimize multiple RAG configurations to find the perfect balance
+                RANGO is a comprehensive RAG (Retrieval-Augmented Generation)
+                pipeline optimization framework. Benchmark, evaluate, and
+                optimize multiple RAG configurations to find the perfect balance
                 between speed, cost, and quality for your use case.
               </p>
             </div>
@@ -221,8 +228,9 @@ export const About = ({ onBack }) => {
                   fontWeight: 400,
                 }}
               >
-                Built with Python (FastAPI, LLM integrations), React (Vite), PostgreSQL with pgvector,
-                and modern ML/NLP libraries. Supports multiple LLM providers and retrieval strategies.
+                Built with Python (FastAPI, LLM integrations), React (Vite),
+                PostgreSQL with pgvector, and modern ML/NLP libraries. Supports
+                multiple LLM providers and retrieval strategies.
               </p>
             </div>
           </div>
@@ -291,7 +299,8 @@ export const About = ({ onBack }) => {
                 color: "#b0b0b0",
               }}
             >
-              Contributions welcome. Fork the repository and submit pull requests.
+              Contributions welcome. Fork the repository and submit pull
+              requests.
               <br />
               Report issues on GitHub.
             </p>
