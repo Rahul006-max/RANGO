@@ -4,16 +4,32 @@ Ensures server starts quickly without blocking on heavy initialization.
 """
 import os
 import sys
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+# Global flag for routes
+routes_loaded = False
+
 # ===== LIFESPAN HANDLER (doesn't block port binding) =====
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Load routes after server starts listening."""
-    print("[INFO] Loading API routes...")
+    """Start background task to load routes."""
+    print("[INFO] Lifespan started - server listening on port")
+    # Create background task without awaiting (non-blocking)
+    asyncio.create_task(load_routes_async(app))
+    yield
+    print("[INFO] Server shutting down...")
+
+
+async def load_routes_async(app: FastAPI):
+    """Load routes asynchronously in background."""
+    global routes_loaded
+    print("[INFO] Loading API routes in background...")
+    await asyncio.sleep(0.1)  # Small delay to ensure port is bound
+    
     try:
         from routes import (
             analytics, collections, upload, ask, chat,
@@ -44,13 +60,12 @@ async def lifespan(app: FastAPI):
             except Exception as e:
                 print(f"[WARN] Could not load {name} router: {str(e)[:100]}")
                 
-        print("[OK] Route loading complete")
+        routes_loaded = True
+        print("[OK] All routes loaded successfully")
     except Exception as e:
         print(f"[WARN] Failed to load routes: {str(e)[:200]}")
         print("[INFO] Running in minimal mode")
-    
-    yield
-    print("[INFO] Server shutting down...")
+
 
 # Create FastAPI app with lifespan handler
 app = FastAPI(
