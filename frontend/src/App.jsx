@@ -1,4 +1,4 @@
-import {
+import React, {
   useEffect,
   useState,
   useMemo,
@@ -5342,49 +5342,53 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
                 fontWeight: 500,
               }}
             >
-              <a 
-                href="https://github.com/Rahul006-max/RANGO" 
-                target="_blank" 
+              <a
+                href="https://github.com/Rahul006-max/RANGO"
+                target="_blank"
                 rel="noopener noreferrer"
-                style={{ color: "#9CA3AF", textDecoration: "none", cursor: "pointer" }}
-                onMouseOver={(e) => e.target.style.color = "#fff"}
-                onMouseOut={(e) => e.target.style.color = "#9CA3AF"}
+                style={{
+                  color: "#9CA3AF",
+                  textDecoration: "none",
+                  cursor: "pointer",
+                }}
+                onMouseOver={(e) => (e.target.style.color = "#fff")}
+                onMouseOut={(e) => (e.target.style.color = "#9CA3AF")}
               >
                 GitHub
               </a>
-              <button 
+              <button
                 onClick={() => setShowDocumentation(true)}
-                style={{ 
-                  background: "none", 
-                  border: "none", 
-                  color: "#9CA3AF", 
-                  cursor: "pointer", 
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#9CA3AF",
+                  cursor: "pointer",
                   fontSize: "12px",
                   fontWeight: 500,
                   padding: "0",
                   fontFamily: "inherit",
                   textDecoration: "none",
                 }}
-                onMouseOver={(e) => e.target.style.color = "#fff"}
-                onMouseOut={(e) => e.target.style.color = "#9CA3AF"}
+                onMouseOver={(e) => (e.target.style.color = "#fff")}
+                onMouseOut={(e) => (e.target.style.color = "#9CA3AF")}
               >
                 Documentation
               </button>
-              <button 
+              <button
                 onClick={() => setShowAbout(true)}
-                style={{ 
-                  background: "none", 
-                  border: "none", 
-                  color: "#9CA3AF", 
-                  cursor: "pointer", 
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#9CA3AF",
+                  cursor: "pointer",
                   fontSize: "12px",
                   fontWeight: 500,
                   padding: "0",
                   fontFamily: "inherit",
                   textDecoration: "none",
                 }}
-                onMouseOver={(e) => e.target.style.color = "#fff"}
-                onMouseOut={(e) => e.target.style.color = "#9CA3AF"}
+                onMouseOver={(e) => (e.target.style.color = "#fff")}
+                onMouseOut={(e) => (e.target.style.color = "#9CA3AF")}
               >
                 About
               </button>
