@@ -6,6 +6,8 @@ import React, {
   useCallback,
   Component,
   Fragment,
+  Suspense,
+  lazy,
 } from "react";
 import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
@@ -13,7 +15,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import "./ModernApp.css";
 import TreeViewer from "./TreeViewer";
-import Silk from "./components/Silk";
+const Silk = lazy(() => import("./components/Silk"));
 import { FastModeResults } from "./components/FastModeResults";
 import { CompareModeResults } from "./components/CompareModeResults";
 import { DetailedMetricsPanel } from "./components/DetailedMetricsPanel";
@@ -5123,13 +5125,15 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
             zIndex: 0,
           }}
         >
-          <Silk
-            speed={5}
-            scale={1}
-            color="#8556ae"
-            noiseIntensity={1.5}
-            rotation={0}
-          />
+          <Suspense fallback={null}>
+            <Silk
+              speed={5}
+              scale={1}
+              color="#8556ae"
+              noiseIntensity={1.5}
+              rotation={0}
+            />
+          </Suspense>
         </div>
 
         <div
