@@ -5573,13 +5573,15 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
         }}
       >
         {/* Animated Background */}
-        <Silk
-          speed={5}
-          scale={1}
-          color="#7066a3"
-          noiseIntensity={1.5}
-          rotation={0}
-        />
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, pointerEvents: "none" }}>
+          <Silk
+            speed={5}
+            scale={1}
+            color="#7066a3"
+            noiseIntensity={1.5}
+            rotation={0}
+          />
+        </div>
 
         <div
           style={{
