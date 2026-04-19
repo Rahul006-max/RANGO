@@ -62,6 +62,16 @@ async def load_routes_async(app: FastAPI):
                 
         routes_loaded = True
         print("[OK] All routes loaded successfully")
+        
+        # Load existing collections from database/disk into memory
+        try:
+            print("[INFO] Scanning for existing collections...")
+            from core.retrieval import load_existing_collections
+            await asyncio.to_thread(load_existing_collections)
+            print("[INFO] Loaded existing collections into memory")
+        except Exception as e:
+            print(f"[WARN] Failed to load existing collections: {e}")
+            
     except Exception as e:
         print(f"[WARN] Failed to load routes: {str(e)[:200]}")
         print("[INFO] Running in minimal mode")

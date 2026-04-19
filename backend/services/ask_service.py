@@ -78,7 +78,7 @@ def ask_question(data: AskRequest, user_id: str, access_token: str, model_name: 
     if not collection_res.data:
         return {"error": "Collection not found", "status_code": 400}
 
-    # ── Route tree-indexed collections to PageIndex retrieval ─────────────
+    # Route tree-indexed collections to PageIndex retrieval
     col_index_type = (collection_res.data.get("index_type") or "vector").lower()
     if col_index_type == "tree":
         from services.page_index_service import answer_with_tree
@@ -89,11 +89,6 @@ def ask_question(data: AskRequest, user_id: str, access_token: str, model_name: 
             sb=sb,
             fast=(mode == "fast"),
         )
-
-    if data.collection_id not in PIPELINE_DB_PATHS:
-        return {"error": {"error": "index_missing_locally", "message": "Index missing locally. Rebuild index."}, "status_code": 422}
-
-    collection_paths = PIPELINE_DB_PATHS[data.collection_id]
     
     # Controlled randomization (PER RUN)
     run_weights = randomized_weights()

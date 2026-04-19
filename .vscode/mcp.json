@@ -1,52 +1,4 @@
 {
-	"servers": {
-		"microsoft/playwright-mcp": {
-			"type": "stdio",
-			"command": "npx",
-			"args": [
-				"@playwright/mcp@latest"
-			],
-			"gallery": "https://api.mcp.github.com",
-			"version": "0.0.1-seed"
-		},
-		"com.supabase/mcp": {
-			"type": "stdio",
-			"command": "npx",
-			"args": [
-				"--project-ref",
-				"${input:project-ref}",
-				"--read-only",
-				"${input:read-only}",
-				"--features",
-				"${input:features}",
-				"--api-url",
-				"${input:api-url}",
-				"--registry",
-				"https://registry.npmjs.org",
-				"@supabase/mcp-server-supabase@0.7.0"
-			],
-			"env": {
-				"SUPABASE_ACCESS_TOKEN": "${input:SUPABASE_ACCESS_TOKEN}"
-			},
-			"gallery": "https://api.mcp.github.com",
-			"version": "0.7.0"
-		},
-		"com.vercel/vercel-mcp": {
-			"type": "http",
-			"url": "https://mcp.vercel.com",
-			"gallery": "https://api.mcp.github.com",
-			"version": "0.0.3"
-		},
-		"io.github.vercel/next-devtools-mcp": {
-			"type": "stdio",
-			"command": "npx",
-			"args": [
-				"next-devtools-mcp@0.3.6"
-			],
-			"gallery": "https://api.mcp.github.com",
-			"version": "0.3.6"
-		}
-	},
 	"inputs": [
 		{
 			"id": "project-ref",
@@ -78,5 +30,6 @@
 			"description": "Personal access token for Supabase API",
 			"password": true
 		}
-	]
+	],
+	"servers": {}
 }

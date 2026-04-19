@@ -47,9 +47,6 @@ async def create_batch_eval_run(
     if not collection_res.data:
         return {"error": "Collection not found", "status_code": 404}
 
-    if collection_id not in PIPELINE_DB_PATHS:
-        return {"error": "Collection not indexed. Upload PDFs first.", "status_code": 400}
-
     run_id = str(uuid.uuid4())
     t_batch_start = now_ms()
     items_out = []

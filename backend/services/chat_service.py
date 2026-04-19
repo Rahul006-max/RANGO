@@ -202,11 +202,6 @@ async def chat_stream_generator(
         conversation_context = "\n".join(context_messages)
 
         # Vector collections require local vector index map
-        if data.collection_id not in PIPELINE_DB_PATHS:
-            yield "[ERROR] Collection not found. Please upload documents first."
-            return
-        
-        collection_paths = PIPELINE_DB_PATHS[data.collection_id]
         
         # Try smart extraction first
         full_text = COLLECTION_FULLTEXT.get(data.collection_id, "")
@@ -221,10 +216,6 @@ async def chat_stream_generator(
         else:
             # Use the preferred/best performing pipeline
             pipeline_info = next((p for p in SYSTEM_PIPELINES if p["name"] == preferred_pipeline), SYSTEM_PIPELINES[0])
-            
-            if data.collection_id not in PIPELINE_DB_PATHS:
-                yield f"Collection not available. Please upload documents first."
-                return
             
             # Build enhanced query with conversation context
             if len(chat_history) > 1:

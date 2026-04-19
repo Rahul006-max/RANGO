@@ -75,7 +75,7 @@ export const CompareModeResults = ({ result, askLoading }) => {
     return (
       <div className="winner-analysis">
         <div className="winner-header">
-          <h3>🏆 Winner: {bestData.pipeline}</h3>
+          <h3>Winner: {bestData.pipeline}</h3>
           <div className="winner-score">
             <span className="score-number">
               {bestScores.final?.toFixed(1) || "0"}
@@ -116,8 +116,6 @@ export const CompareModeResults = ({ result, askLoading }) => {
               key={idx}
               className={`compare-card ${isWinner ? "winner" : ""}`}
             >
-              {isWinner && <div className="winner-badge">🏆</div>}
-
               <div className="card-header">
                 <h4>{pipeline.pipeline}</h4>
                 <div className="card-score">
