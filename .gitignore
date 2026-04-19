@@ -1,3 +1,10 @@
-/BACKEND_UPGRADE_A_SUMMARY.md**/.env
+/BACKEND_UPGRADE_A_SUMMARY.md
+
+# Environment variables - NEVER commit these
+**/.env
+**/.env.production
+**/.env.local
+**/.env.*.local
+
 **/node_modules/
 __pycache__/
