@@ -3198,14 +3198,14 @@ html[data-theme="dark"] .authGate {
 }
 .dropZone:hover {
   background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 90, 31, 0.4);
-  color: rgba(255, 90, 31, 0.8);
+  border-color: rgba(34, 197, 94, 0.4);
+  color: rgba(34, 197, 94, 0.8);
 }
 .dropZone.dragOver {
-  border-color: #ff5a1f;
-  background: rgba(255, 90, 31, 0.15);
-  color: #ff5a1f;
-  box-shadow: 0 0 15px rgba(255, 90, 31, 0.2);
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+  box-shadow: 0 0 15px rgba(34, 197, 94, 0.2);
 }
 .dropZone input[type="file"] {
   display: none;

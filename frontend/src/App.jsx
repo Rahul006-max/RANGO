@@ -3155,6 +3155,7 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
                 checked={indexType === "vector"}
                 onChange={(e) => setIndexType(e.target.value)}
                 disabled={uploading}
+                style={{ accentColor: "#22c55e" }}
               />
               Vector DB
             </label>
@@ -3174,6 +3175,7 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
                 checked={indexType === "tree"}
                 onChange={(e) => setIndexType(e.target.value)}
                 disabled={uploading}
+                style={{ accentColor: "#22c55e" }}
               />
               Tree Index
             </label>
