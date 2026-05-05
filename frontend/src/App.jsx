@@ -1068,11 +1068,17 @@ export default function App() {
         custom_pipeline: {
           enabled: customEnabled,
           pipeline_name:
-            (customConfig.pipeline_name || customConfig.preset_name || "").trim() ||
-            CUSTOM_PIPELINE_NAME,
+            (
+              customConfig.pipeline_name ||
+              customConfig.preset_name ||
+              ""
+            ).trim() || CUSTOM_PIPELINE_NAME,
           preset_name:
-            (customConfig.pipeline_name || customConfig.preset_name || "").trim() ||
-            CUSTOM_PIPELINE_NAME,
+            (
+              customConfig.pipeline_name ||
+              customConfig.preset_name ||
+              ""
+            ).trim() || CUSTOM_PIPELINE_NAME,
           chunk_size: Number(customConfig.chunk_size) || 800,
           overlap: Number(customConfig.overlap) || 120,
           top_k: Number(customConfig.top_k) || 6,
@@ -1378,8 +1384,9 @@ export default function App() {
       let bestScores = {};
       if (comparePipelines.length > 0) {
         const bestPipelineData =
-          comparePipelines.find((p) => p.pipeline === queryData?.best_pipeline) ||
-          comparePipelines[0];
+          comparePipelines.find(
+            (p) => p.pipeline === queryData?.best_pipeline,
+          ) || comparePipelines[0];
         bestScores = bestPipelineData?.scores || {};
       }
 
@@ -1531,7 +1538,14 @@ export default function App() {
         ["Tokens", fmtNum(safeMetrics?.tokens?.total_tokens || 0)],
         ["Cost", fmtMoney(safeMetrics?.cost_usd || 0)],
       ];
-      drawCard(page.margin, yPos, cardWidth, cardHeight, "Latency", latencyRows);
+      drawCard(
+        page.margin,
+        yPos,
+        cardWidth,
+        cardHeight,
+        "Latency",
+        latencyRows,
+      );
       drawCard(
         page.margin + cardWidth + cardGap,
         yPos,
@@ -1664,9 +1678,7 @@ export default function App() {
         pdf.text(`Page ${i} of ${totalPages}`, 195, 288, { align: "right" });
       }
 
-      pdf.save(
-        `RAG_Analytics_Report_${timestamp.replace(/[: ]/g, "_")}.pdf`,
-      );
+      pdf.save(`RAG_Analytics_Report_${timestamp.replace(/[: ]/g, "_")}.pdf`);
       toast.success("Comprehensive analytics PDF downloaded");
     } catch (error) {
       console.error("PDF download error:", error);
@@ -1997,7 +2009,12 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
       allowed.add(CUSTOM_PIPELINE_NAME);
     }
     return allowed;
-  }, [leaderboard, customEnabled, customConfig.pipeline_name, customConfig.preset_name]);
+  }, [
+    leaderboard,
+    customEnabled,
+    customConfig.pipeline_name,
+    customConfig.preset_name,
+  ]);
 
   const filteredLeaderboardPipelines = useMemo(() => {
     if (!leaderboard?.pipelines) return [];
@@ -2301,7 +2318,8 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
           overlap: cfg.overlap ?? 120,
           top_k: cfg.top_k ?? 6,
           search_type: cfg.search_type || "mmr",
-          index_status: cfg.index_status || (cfg.enabled ? "not_built" : "disabled"),
+          index_status:
+            cfg.index_status || (cfg.enabled ? "not_built" : "disabled"),
           chunks_created: cfg.chunks_created ?? 0,
           build_time_sec: cfg.build_time_sec ?? null,
           updated_at: cfg.updated_at ?? null,
@@ -2353,15 +2371,19 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
       const pipelineName =
         (customConfig.pipeline_name || customConfig.preset_name || "").trim() ||
         "Custom";
-      const res = await api.post(`/collections/${collectionId}/custom-pipeline`, {
-        enabled: customEnabled,
-        ...customConfig,
-        pipeline_name: pipelineName,
-        preset_name: pipelineName,
-      });
+      const res = await api.post(
+        `/collections/${collectionId}/custom-pipeline`,
+        {
+          enabled: customEnabled,
+          ...customConfig,
+          pipeline_name: pipelineName,
+          preset_name: pipelineName,
+        },
+      );
       const saved = res.data?.custom_pipeline;
       if (saved) {
-        const savedName = saved.pipeline_name || saved.preset_name || pipelineName;
+        const savedName =
+          saved.pipeline_name || saved.preset_name || pipelineName;
         setCustomEnabled(!!saved.enabled);
         setCustomConfig({
           pipeline_name: savedName,
@@ -3563,7 +3585,9 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
                   <input
                     type="text"
                     className="claudeInput"
-                    value={customConfig.pipeline_name || customConfig.preset_name}
+                    value={
+                      customConfig.pipeline_name || customConfig.preset_name
+                    }
                     onChange={(e) =>
                       updateCustomField("pipeline_name", e.target.value)
                     }
@@ -3661,7 +3685,12 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
                   : ""}
               </div>
               <div className="mini">
-                Current: {customConfig.pipeline_name || customConfig.preset_name || "Custom"} · {customConfig.chunk_size}ch | {customConfig.overlap}ov | k{customConfig.top_k} | {customConfig.search_type}
+                Current:{" "}
+                {customConfig.pipeline_name ||
+                  customConfig.preset_name ||
+                  "Custom"}{" "}
+                · {customConfig.chunk_size}ch | {customConfig.overlap}ov | k
+                {customConfig.top_k} | {customConfig.search_type}
               </div>
             </>
           )}
