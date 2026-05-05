@@ -66,7 +66,7 @@ def describe_image_with_groq(image_bytes: bytes, mime_type: str = "image/jpeg") 
 
 NORMAL_PROMPT = ChatPromptTemplate.from_template(
     """
-You are a helpful assistant.
+You are a document QA assistant, not a general chatbot.
 Answer the question ONLY using the context below.
 If the answer is not in the context, say: "I don't know based on the documents."
 Be concise — answer in 1-2 sentences.
@@ -83,10 +83,11 @@ Answer:
 
 STRICT_PROMPT = ChatPromptTemplate.from_template(
     """
-You are an answer extraction system.
+You are an answer extraction system for uploaded documents.
 
 RULES:
 - Use ONLY the provided context.
+- Do not answer small talk or general-world questions.
 - Return ONLY the final answer (no explanation).
 - If the answer is not present, return exactly: I don't know based on the documents.
 
@@ -102,10 +103,16 @@ Final Answer:
 
 SUMMARY_PROMPT = ChatPromptTemplate.from_template(
     """
-You are a document analyst. Using ONLY the context provided below, write a clear and
+You are a document analyst, not a general chatbot. Using ONLY the context provided below, write a clear and
 complete response to the request. Synthesize information from all parts of the context.
 Do NOT say "I don't know" — if partial information exists, use it.
-Write 2-5 sentences.
+
+Formatting rules:
+- Use Markdown.
+- If the request asks for a number of points/topics/takeaways, return exactly that many numbered items.
+- Each numbered item must start on its own line as "1. **Short label:** explanation".
+- Keep each item human-readable and avoid long walls of text.
+- Otherwise write 2-5 concise sentences.
 
 Context:
 {context}
@@ -119,7 +126,7 @@ Response:
 
 EXTRACTION_PROMPT = ChatPromptTemplate.from_template(
     """
-You are an information extractor. Your ONLY job is to scan ALL of the provided context
+You are an information extractor for uploaded documents. Your ONLY job is to scan ALL of the provided context
 chunks and extract every item that answers the question below.
 
 RULES:
@@ -144,6 +151,12 @@ _SUMMARY_KEYWORDS = (
     "what does this", "what are the main", "main argument", "main point",
     "key point", "key argument", "main theme", "main topic", "outline",
     "briefly explain", "explain the", "what is the document",
+    "important point", "important points", "imp point", "imp points",
+    "important topic", "important topics", "imp topic", "imp topics",
+    "5 points", "five points", "top points", "main points",
+    "5 topic", "5 topics", "five topic", "five topics",
+    "main topics", "top topics",
+    "key takeaways", "takeaways", "highlights",
 )
 
 _EXTRACTION_KEYWORDS = (
@@ -167,6 +180,86 @@ def _is_extraction_question(question: str) -> bool:
     """Return True when the question asks for a list/enumeration of items."""
     q = question.lower()
     return any(kw in q for kw in _EXTRACTION_KEYWORDS)
+
+
+def requested_list_count(question: str) -> int | None:
+    q = (question or "").lower()
+    word_nums = {
+        "one": 1,
+        "two": 2,
+        "three": 3,
+        "four": 4,
+        "five": 5,
+        "six": 6,
+        "seven": 7,
+        "eight": 8,
+        "nine": 9,
+        "ten": 10,
+    }
+    digit_match = re.search(r"\b([1-9]|10)\s+(?:important\s+|imp\s+|key\s+|main\s+|top\s+)?(?:points?|topics?|takeaways?|highlights?)\b", q)
+    if digit_match:
+        return int(digit_match.group(1))
+    for word, value in word_nums.items():
+        if re.search(rf"\b{word}\s+(?:important\s+|imp\s+|key\s+|main\s+|top\s+)?(?:points?|topics?|takeaways?|highlights?)\b", q):
+            return value
+    return None
+
+
+def wants_numbered_list(question: str) -> bool:
+    q = (question or "").lower()
+    if requested_list_count(q):
+        return True
+    return any(
+        phrase in q
+        for phrase in (
+            "important points",
+            "imp points",
+            "important topics",
+            "imp topics",
+            "key takeaways",
+            "main points",
+            "main topics",
+            "top points",
+            "top topics",
+        )
+    )
+
+
+def ensure_readable_answer_format(question: str, answer: str) -> str:
+    """Normalize list-style answers into readable Markdown when the model drifts."""
+    if not answer or not wants_numbered_list(question):
+        return answer
+    if re.search(r"(?m)^\s*(?:\d+\.|-|\*)\s+", answer):
+        return answer.strip()
+
+    count = requested_list_count(question) or 5
+    intro = ""
+    body = answer.strip()
+    intro_match = re.match(r"^(.*?:)\s+(.+)$", body, flags=re.DOTALL)
+    if intro_match and len(intro_match.group(1)) < 180:
+        intro = intro_match.group(1).strip()
+        body = intro_match.group(2).strip()
+
+    pieces = [p.strip() for p in re.split(r"(?<=[.!?])\s+", body) if p.strip()]
+    if len(pieces) < count:
+        pieces = [p.strip() for p in re.split(r"\n+", body) if p.strip()]
+    if len(pieces) < count:
+        return answer.strip()
+
+    items = pieces[:count]
+    lines = []
+    if intro:
+        lines.append(intro)
+        lines.append("")
+    for idx, item in enumerate(items, start=1):
+        item = item.rstrip(".")
+        label = item.split(",", 1)[0].split(";", 1)[0].strip()
+        words = label.split()
+        if len(words) > 6:
+            label = " ".join(words[:6])
+        label = label.strip(":.- ") or f"Point {idx}"
+        lines.append(f"{idx}. **{label}:** {item}.")
+    return "\n".join(lines)
 
 
 def generate_answer_with_retry(

@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional
 import csv
 import json
 
+from core.pipelines import CUSTOM_PIPELINE_NAME, SYSTEM_PIPELINE_NAMES
 from dependencies import get_supabase_user_client
 
 
@@ -39,6 +40,47 @@ def _format_day(created_at: str) -> str:
         return "unknown"
 
 
+def _get_allowed_pipelines(sb, *, user_id: str, collection_id: Optional[str] = None) -> set:
+    allowed = set(SYSTEM_PIPELINE_NAMES)
+    custom_enabled = False
+    custom_names = set()
+    try:
+        if collection_id:
+            res = (
+                sb.table("rag_collections")
+                .select("custom_pipeline_config")
+                .eq("id", collection_id)
+                .eq("user_id", user_id)
+                .single()
+                .execute()
+            )
+            cfg = res.data.get("custom_pipeline_config") if res.data else None
+            custom_enabled = bool((cfg or {}).get("enabled"))
+            if custom_enabled:
+                name = (cfg or {}).get("preset_name") or CUSTOM_PIPELINE_NAME
+                custom_names.add(name)
+        else:
+            res = (
+                sb.table("rag_collections")
+                .select("custom_pipeline_config")
+                .eq("user_id", user_id)
+                .execute()
+            )
+            for row in res.data or []:
+                cfg = row.get("custom_pipeline_config") or {}
+                if cfg.get("enabled"):
+                    custom_enabled = True
+                    name = cfg.get("preset_name") or CUSTOM_PIPELINE_NAME
+                    custom_names.add(name)
+    except Exception:
+        custom_enabled = False
+
+    if custom_enabled:
+        custom_names.add(CUSTOM_PIPELINE_NAME)
+        allowed.update(custom_names)
+    return allowed
+
+
 def persist_query_analytics(
     sb,
     *,
@@ -64,7 +106,6 @@ def persist_query_analytics(
     payload = {
         "user_id": user_id,
         "collection_id": collection_id,
-        "question": question,
         "mode": mode,
         "index_type": index_type or "vector",
         "best_pipeline": best_pipeline,
@@ -207,6 +248,13 @@ def get_cost_analytics(
             collection_id=collection_id,
             since_iso=since_iso,
         )
+
+    allowed = _get_allowed_pipelines(
+        sb,
+        user_id=user_id,
+        collection_id=collection_id,
+    )
+    rows = [r for r in rows if (r.get("best_pipeline") or "unknown") in allowed]
 
     total_queries = len(rows)
     total_cost = sum(_to_float(r.get("cost_usd"), 0.0) for r in rows)

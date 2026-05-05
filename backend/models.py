@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 class CustomPipelineConfig(BaseModel):
     enabled: bool = False
+    pipeline_name: Optional[str] = None
     preset_name: str = "Custom"
     chunk_size: int = 800
     overlap: int = 120

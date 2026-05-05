@@ -5,6 +5,7 @@ Ensures server starts quickly without blocking on heavy initialization.
 import os
 import sys
 import asyncio
+import importlib
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -16,65 +17,54 @@ routes_loaded = False
 # ===== LIFESPAN HANDLER (doesn't block port binding) =====
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Start background task to load routes."""
+    """Start background task for non-critical startup work."""
     print("[INFO] Lifespan started - server listening on port")
-    # Create background task without awaiting (non-blocking)
-    asyncio.create_task(load_routes_async(app))
+    asyncio.create_task(load_existing_collections_async())
     yield
     print("[INFO] Server shutting down...")
 
 
-async def load_routes_async(app: FastAPI):
-    """Load routes asynchronously in background."""
+def load_routes(app: FastAPI):
+    """Load API routes at import time so the server never starts route-less."""
     global routes_loaded
-    print("[INFO] Loading API routes in background...")
-    await asyncio.sleep(0.1)  # Small delay to ensure port is bound
-    
-    try:
-        from routes import (
-            analytics, collections, upload, ask, chat,
-            leaderboard, batch_eval, image_test, export,
-            page_index, models
-        )
-        
-        # Register all available routers
-        routers = [
-            (collections, "Collections"),
-            (upload, "Upload"),
-            (ask, "Ask"),
-            (chat, "Chat"),
-            (leaderboard, "Leaderboard"),
-            (batch_eval, "Batch Eval"),
-            (image_test, "Image Test"),
-            (export, "Export"),
-            (page_index, "PageIndex"),
-            (analytics, "Analytics"),
-            (models, "Models"),
-        ]
-        
-        for module, name in routers:
-            try:
-                if hasattr(module, 'router') and module.router:
-                    app.include_router(module.router, tags=[name])
-                    print(f"[OK] Loaded {name} router")
-            except Exception as e:
-                print(f"[WARN] Could not load {name} router: {str(e)[:100]}")
-                
-        routes_loaded = True
-        print("[OK] All routes loaded successfully")
-        
-        # Load existing collections from database/disk into memory
+    routers = [
+        ("routes.collections", "Collections"),
+        ("routes.upload", "Upload"),
+        ("routes.ask", "Ask"),
+        ("routes.chat", "Chat"),
+        ("routes.leaderboard", "Leaderboard"),
+        ("routes.batch_eval", "Batch Eval"),
+        ("routes.image_test", "Image Test"),
+        ("routes.export", "Export"),
+        ("routes.page_index", "PageIndex"),
+        ("routes.analytics", "Analytics"),
+        ("routes.models", "Models"),
+    ]
+
+    loaded = 0
+    for module_path, name in routers:
         try:
-            print("[INFO] Scanning for existing collections...")
-            from core.retrieval import load_existing_collections
-            await asyncio.to_thread(load_existing_collections)
-            print("[INFO] Loaded existing collections into memory")
+            module = importlib.import_module(module_path)
+            if hasattr(module, "router") and module.router:
+                app.include_router(module.router, tags=[name])
+                loaded += 1
+                print(f"[OK] Loaded {name} router")
         except Exception as e:
-            print(f"[WARN] Failed to load existing collections: {e}")
-            
+            print(f"[WARN] Could not load {name} router: {str(e)[:200]}")
+
+    routes_loaded = loaded > 0
+    print(f"[OK] Loaded {loaded}/{len(routers)} API routers")
+
+
+async def load_existing_collections_async():
+    """Load existing collections from database/disk into memory after binding."""
+    try:
+        print("[INFO] Scanning for existing collections...")
+        from core.retrieval import load_existing_collections
+        await asyncio.to_thread(load_existing_collections)
+        print("[INFO] Loaded existing collections into memory")
     except Exception as e:
-        print(f"[WARN] Failed to load routes: {str(e)[:200]}")
-        print("[INFO] Running in minimal mode")
+        print(f"[WARN] Failed to load existing collections: {e}")
 
 
 # Create FastAPI app with lifespan handler
@@ -100,6 +90,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+load_routes(app)
 
 @app.get("/")
 def home():

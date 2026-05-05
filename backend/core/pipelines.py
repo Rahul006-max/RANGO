@@ -13,6 +13,9 @@ SYSTEM_PIPELINES = [
     {"name": "DeepSearch (MMR + Higher k)", "chunk_size": 1200, "overlap": 200, "search_type": "mmr", "k": 10},
 ]
 
+SYSTEM_PIPELINE_NAMES = [p["name"] for p in SYSTEM_PIPELINES]
+CUSTOM_PIPELINE_NAME = "Custom User Pipeline"
+
 PIPELINES = SYSTEM_PIPELINES  # Backwards-compatible alias
 
 # Metadata-only descriptor for tree-indexed collections (not used in vector builds)

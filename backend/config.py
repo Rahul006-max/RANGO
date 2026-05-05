@@ -3,6 +3,7 @@
 import os
 from dataclasses import dataclass
 from functools import lru_cache
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -34,6 +35,8 @@ class AppSettings:
 
 
 def _build_settings() -> AppSettings:
+    backend_env = Path(__file__).resolve().parent / ".env"
+    load_dotenv(backend_env)
     load_dotenv()
 
     supabase_url = os.getenv("SUPABASE_URL")

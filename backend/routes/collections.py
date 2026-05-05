@@ -94,17 +94,22 @@ def save_custom_pipeline(
     user=Depends(get_current_user)
 ):
     """Save custom pipeline configuration for a collection."""
+    pipeline_name = (config.pipeline_name or config.preset_name or "").strip() or "Custom"
     config_dict = {
         "enabled": config.enabled,
-        "preset_name": config.preset_name,
+        "pipeline_name": pipeline_name,
+        "preset_name": pipeline_name,
         "chunk_size": config.chunk_size,
         "overlap": config.overlap,
         "top_k": config.top_k,
         "search_type": config.search_type,
     }
-    return collection_service.save_custom_pipeline(
+    result = collection_service.save_custom_pipeline(
         collection_id, config_dict, user["sub"], user["access_token"]
     )
+    if "error" in result:
+        raise HTTPException(status_code=result.get("status_code", 400), detail=result["error"])
+    return result
 
 
 @router.get("/collections/{collection_id}/pipeline-presets")

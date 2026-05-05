@@ -195,6 +195,22 @@ const PIPELINE_SHORT_LABELS = {
 };
 const shortLabel = (name) => PIPELINE_SHORT_LABELS[name] || name;
 
+const SYSTEM_PIPELINE_NAMES = [
+  "Balanced (MMR)",
+  "Fastest (Similarity)",
+  "Accurate (Similarity + Larger k)",
+  "DeepSearch (MMR + Higher k)",
+];
+const CUSTOM_PIPELINE_NAME = "Custom User Pipeline";
+const getAllowedPipelineNames = (customOn, customName) => {
+  const allowed = new Set(SYSTEM_PIPELINE_NAMES);
+  if (customOn) {
+    const trimmed = (customName || "").trim();
+    allowed.add(trimmed || CUSTOM_PIPELINE_NAME);
+  }
+  return allowed;
+};
+
 export default function App() {
   // ✅ AUTH
   const [user, setUser] = useState(null);
@@ -286,11 +302,16 @@ export default function App() {
   // ✅ CUSTOM USER PIPELINE (+1 optional, doesn't replace 4 system pipelines)
   const [customEnabled, setCustomEnabled] = useState(false);
   const [customConfig, setCustomConfig] = useState({
+    pipeline_name: "Custom",
     preset_name: "Custom",
     chunk_size: 800,
     overlap: 120,
     top_k: 6,
     search_type: "mmr",
+    index_status: "not_built",
+    chunks_created: 0,
+    build_time_sec: null,
+    updated_at: null,
   });
   const [customDirty, setCustomDirty] = useState(false);
   const [customSaving, setCustomSaving] = useState(false);
@@ -1012,6 +1033,16 @@ export default function App() {
     if (!collectionId) return toast.error("Select a collection first.");
     if (mode === "chat")
       return toast.error("Chat mode uses streaming endpoint, not /ask");
+    if (customEnabled) {
+      const customName =
+        (customConfig.pipeline_name || customConfig.preset_name || "").trim() ||
+        CUSTOM_PIPELINE_NAME;
+      if (customDirty || customConfig.index_status !== "ready") {
+        return toast.error(
+          `Save & build "${customName}" before running the custom pipeline.`,
+        );
+      }
+    }
 
     const pendingQ = question.trim();
     setQuestion(""); // clear textarea immediately — like chat mode
@@ -1036,7 +1067,12 @@ export default function App() {
         model_name: selectedModel,
         custom_pipeline: {
           enabled: customEnabled,
-          preset_name: "Custom",
+          pipeline_name:
+            (customConfig.pipeline_name || customConfig.preset_name || "").trim() ||
+            CUSTOM_PIPELINE_NAME,
+          preset_name:
+            (customConfig.pipeline_name || customConfig.preset_name || "").trim() ||
+            CUSTOM_PIPELINE_NAME,
           chunk_size: Number(customConfig.chunk_size) || 800,
           overlap: Number(customConfig.overlap) || 120,
           top_k: Number(customConfig.top_k) || 6,
@@ -1238,906 +1274,398 @@ export default function App() {
 
       const pdf = new jsPDF("p", "mm", "a4");
       const timestamp = new Date().toLocaleString();
-      const queryData = getActiveQueryData(); // Use helper to get query data
+      const queryData = getActiveQueryData();
       const safeMetrics = queryData?.metrics || {};
       const isCompareMode =
         mode === "compare" && queryData?.retrieval_comparison?.length > 0;
-      const isFastMode = mode === "fast";
+      const comparePipelines =
+        pipelineData?.length > 0
+          ? pipelineData
+          : queryData?.retrieval_comparison || [];
 
-      let yPos = 15;
-      let pageBreakThreshold = 270;
+      const page = {
+        margin: 15,
+        width: 210,
+        height: 297,
+        contentWidth: 180,
+      };
+
+      const palette = {
+        ink: [25, 25, 30],
+        muted: [105, 105, 112],
+        accent: [229, 92, 62],
+        accentSoft: [249, 236, 231],
+        panel: [246, 246, 248],
+        line: [220, 220, 224],
+      };
+
+      let yPos = page.margin;
+      const pageBreakThreshold = page.height - page.margin - 10;
 
       const addPageIfNeeded = (margin = 0) => {
         if (yPos + margin > pageBreakThreshold) {
           pdf.addPage();
-          yPos = 15;
+          yPos = page.margin;
           return true;
         }
         return false;
       };
 
-      // Get best pipeline scores for use throughout the report
-      let bestScores = {};
-      if (
-        queryData?.retrieval_comparison &&
-        queryData.retrieval_comparison.length > 0
-      ) {
-        const bestPipelineData =
-          queryData.retrieval_comparison.find(
-            (p) => p.pipeline === queryData.best_pipeline,
-          ) || queryData.retrieval_comparison[0];
-        bestScores = bestPipelineData?.scores || {};
-      }
+      const setTextColor = (rgb) => {
+        pdf.setTextColor(rgb[0], rgb[1], rgb[2]);
+      };
 
-      // Generate UUIDs for report and query tracking
-      const generateUUID = () => {
-        return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
-          const r = (Math.random() * 16) | 0;
-          const v = c === "x" ? r : (r & 0x3) | 0x8;
-          return v.toString(16);
+      const drawSectionTitle = (title) => {
+        addPageIfNeeded(14);
+        pdf.setFontSize(11);
+        pdf.setFont(undefined, "bold");
+        setTextColor(palette.accent);
+        pdf.text(title, page.margin, yPos);
+        yPos += 3.5;
+        pdf.setDrawColor(...palette.line);
+        pdf.line(page.margin, yPos, page.margin + page.contentWidth, yPos);
+        yPos += 6;
+        setTextColor(palette.ink);
+      };
+
+      const drawCard = (x, y, w, h, title, rows) => {
+        pdf.setFillColor(...palette.panel);
+        pdf.rect(x, y, w, h, "F");
+        pdf.setDrawColor(...palette.line);
+        pdf.rect(x, y, w, h);
+        pdf.setFontSize(9);
+        pdf.setFont(undefined, "bold");
+        setTextColor(palette.ink);
+        pdf.text(title, x + 3, y + 5);
+        pdf.setFont(undefined, "normal");
+        pdf.setFontSize(8);
+        setTextColor(palette.muted);
+        let rowY = y + 10;
+        rows.forEach(([label, value]) => {
+          pdf.text(label, x + 3, rowY);
+          setTextColor(palette.ink);
+          pdf.text(String(value), x + w - 3, rowY, { align: "right" });
+          setTextColor(palette.muted);
+          rowY += 4.5;
         });
       };
+
+      const generateUUID = () => {
+        return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(
+          /[xy]/g,
+          function (c) {
+            const r = (Math.random() * 16) | 0;
+            const v = c === "x" ? r : (r & 0x3) | 0x8;
+            return v.toString(16);
+          },
+        );
+      };
+
       const reportId = generateUUID();
       const queryId = generateUUID();
-
-      // Generate suggested filename
-      const dateStr = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-      const timeStr = new Date().toISOString().split("T")[1].substring(0, 8).replace(/:/g, ""); // HHMMSS
+      const dateStr = new Date().toISOString().split("T")[0];
+      const timeStr = new Date()
+        .toISOString()
+        .split("T")[1]
+        .substring(0, 8)
+        .replace(/:/g, "");
       const collectionSlug = (activeCollectionName || "report")
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .substring(0, 20);
       const suggestedFilename = `RAG_Report_${collectionSlug}_${dateStr}_${timeStr}.pdf`;
 
-      // ═══════════════════════════════════════════════════════════
-      // SECTION 1: REPORT HEADER
-      // ═══════════════════════════════════════════════════════════
-      pdf.setFontSize(24);
-      pdf.setFont(undefined, "bold");
-      pdf.text("RAG Analytics Report", 15, yPos);
-      yPos += 8;
-
-      pdf.setFontSize(10);
-      pdf.setFont(undefined, "normal");
-      pdf.setTextColor(100);
-      pdf.text(`Generated: ${timestamp}`, 15, yPos);
-      yPos += 4;
-      pdf.text(`Collection: ${activeCollectionName || "N/A"}`, 15, yPos);
-      yPos += 4;
-      pdf.text(
-        `Index Type: ${activeCollectionIndexType === "tree" ? "Page Index (Tree)" : "Vector Database"}`,
-        15,
-        yPos,
-      );
-      yPos += 12;
-      pdf.setTextColor(0);
-
-      // ═══════════════════════════════════════════════════════════
-      // SECTION 1B: REPORT METADATA
-      // ═══════════════════════════════════════════════════════════
-      addPageIfNeeded();
-      pdf.setFontSize(10);
-      pdf.setFont(undefined, "normal");
-      pdf.setTextColor(100);
-      pdf.text(`Report ID: ${reportId}`, 15, yPos);
-      yPos += 4;
-      pdf.text(`Query ID: ${queryId}`, 15, yPos);
-      yPos += 4;
-      pdf.text(
-        `Environment: ${activeCollectionIndexType === "tree" ? "Development" : "Production"}`,
-        15,
-        yPos,
-      );
-      yPos += 4;
-      pdf.setFontSize(8);
-      pdf.setTextColor(120);
-      pdf.text(`Suggested Filename: ${suggestedFilename}`, 15, yPos);
-      yPos += 8;
-      pdf.setFontSize(10);
-      pdf.setTextColor(0);
-
-      // ═══════════════════════════════════════════════════════════
-      // SECTION 1C: SYSTEM CONFIGURATION
-      // ═══════════════════════════════════════════════════════════
-      pdf.setFontSize(11);
-      pdf.setFont(undefined, "bold");
-      pdf.setTextColor(41, 128, 185);
-      pdf.text("System Configuration", 15, yPos);
-      pdf.setTextColor(0);
-      yPos += 6;
-
-      pdf.setFontSize(9);
-      pdf.setFont(undefined, "normal");
-      const configData = [
-        ["Vector Database", activeCollectionIndexType === "tree" ? "Page Index (Tree)" : "Pinecone/Vector DB"],
-        [
-          "Retrieval Strategy",
-          "Similarity Search",
-        ],
-        ["Distance Metric", "Cosine Similarity"],
-        ["Embedding Model", "OpenAI Embeddings"],
-        ["LLM Model", safeMetrics?.model || "llama-3.3-70b-versatile"],
-        ["Chunk Size", "1024"],
-        ["Chunk Overlap", "128"],
-      ];
-
-      configData.forEach((item) => {
-        pdf.setFont(undefined, "bold");
-        pdf.text(item[0], 15, yPos);
-        pdf.setFont(undefined, "normal");
-        pdf.text(item[1], 90, yPos);
-        yPos += 4;
-      });
-
-      yPos += 4;
-
-      // ═══════════════════════════════════════════════════════════
-      // SECTION 2: CURRENT QUERY ANALYSIS
-      // ═══════════════════════════════════════════════════════════
-      if (queryData) {
-        addPageIfNeeded();
-        pdf.setFontSize(14);
-        pdf.setFont(undefined, "bold");
-        pdf.setTextColor(41, 128, 185);
-        pdf.text("CURRENT QUERY ANALYSIS", 15, yPos);
-        pdf.setTextColor(0);
-        yPos += 8;
-
-        pdf.setFontSize(10);
-        pdf.setFont(undefined, "bold");
-        pdf.text("Question:", 15, yPos);
-        yPos += 4;
-        pdf.setFont(undefined, "normal");
-        const questionLines = pdf.splitTextToSize(
-          queryData.question || "N/A",
-          180,
-        );
-        pdf.text(questionLines, 15, yPos);
-        yPos += Math.max(4, questionLines.length * 4) + 4;
-
-        pdf.setFont(undefined, "bold");
-        pdf.text("Final Answer:", 15, yPos);
-        yPos += 4;
-        pdf.setFont(undefined, "normal");
-        const answerLines = pdf.splitTextToSize(
-          queryData.final_answer || "N/A",
-          180,
-        );
-        const clippedAnswer =
-          answerLines.length > 8
-            ? [...answerLines.slice(0, 8), "... (truncated)"]
-            : answerLines;
-        pdf.text(clippedAnswer, 15, yPos);
-        yPos += clippedAnswer.length * 4 + 6;
-
-        if (queryData.best_pipeline) {
-          pdf.setFont(undefined, "bold");
-          pdf.text("Best Pipeline: ", 15, yPos);
-          pdf.setFont(undefined, "normal");
-          pdf.text(queryData.best_pipeline, 55, yPos);
-          yPos += 6;
-        }
-
-        addPageIfNeeded(50);
-
-        // Two-column metrics layout
-        const colWidth = 85;
-        const leftColX = 15;
-        const rightColX = 105;
-
-        // Left column: Performance Metrics
-        pdf.setFontSize(11);
-        pdf.setFont(undefined, "bold");
-        pdf.setTextColor(41, 128, 185);
-        pdf.text("Performance Metrics", leftColX, yPos);
-        pdf.setTextColor(0);
-        yPos += 6;
-
-        pdf.setFontSize(9);
-        pdf.setFont(undefined, "normal");
-        const perfMetrics = [
-          ["Total Latency:", fmtMs(safeMetrics?.timings_ms?.total_ms || 0)],
-          ["Embedding:", fmtMs(safeMetrics?.timings_ms?.embedding_ms || 0)],
-          ["Retrieval:", fmtMs(safeMetrics?.timings_ms?.retrieval_ms || 0)],
-          ["Rerank:", fmtMs(safeMetrics?.timings_ms?.rerank_ms || 0)],
-          ["LLM:", fmtMs(safeMetrics?.timings_ms?.llm_ms || 0)],
-          ["Smart Extract:", fmtMs(safeMetrics?.timings_ms?.smart_extract_ms || 0)],
-        ];
-
-        perfMetrics.forEach((m) => {
-          pdf.setFont(undefined, "bold");
-          pdf.text(m[0], leftColX, yPos);
-          pdf.setFont(undefined, "normal");
-          pdf.text(m[1], leftColX + 38, yPos);
-          yPos += 5;
-        });
-
-        // Right column: Tokens & Cost
-        yPos -= perfMetrics.length * 5;
-        pdf.setFontSize(11);
-        pdf.setFont(undefined, "bold");
-        pdf.setTextColor(41, 128, 185);
-        pdf.text("Tokens & Cost", rightColX, yPos);
-        pdf.setTextColor(0);
-        yPos += 6;
-
-        pdf.setFontSize(9);
-        pdf.setFont(undefined, "normal");
-        const costMetrics = [
-          ["Prompt Tokens:", fmtNum(safeMetrics?.tokens?.prompt_tokens || 0)],
-          ["Completion Tokens:", fmtNum(safeMetrics?.tokens?.completion_tokens || 0)],
-          ["Total Tokens:", fmtNum(safeMetrics?.tokens?.total_tokens || 0)],
-          ["Cost:", fmtMoney(safeMetrics?.cost_usd || 0)],
-          ["Model:", safeMetrics?.model || "N/A"],
-          ["Cache Hit:", String(safeMetrics?.cache_hit ?? false)],
-        ];
-
-        costMetrics.forEach((m) => {
-          pdf.setFont(undefined, "bold");
-          pdf.text(m[0], rightColX, yPos);
-          pdf.setFont(undefined, "normal");
-          pdf.text(m[1], rightColX + 38, yPos);
-          yPos += 5;
-        });
-
-        yPos += 10;
-        addPageIfNeeded(50);
-
-        // Telemetry & Quality Flags
-        pdf.setFontSize(11);
-        pdf.setFont(undefined, "bold");
-        pdf.setTextColor(41, 128, 185);
-        pdf.text("Quality & Telemetry Indicators", 15, yPos);
-        pdf.setTextColor(0);
-        yPos += 7;
-
-        pdf.setFontSize(9);
-        pdf.setFont(undefined, "normal");
-        const telemetryFlags = [
-          [
-            "Hallucination Detected",
-            (bestScores.grounded || 10) < 6 ? "⚠ Yes" : "✓ No",
-          ],
-          [
-            "Context Truncated",
-            (bestScores.relevance || 5) < 4 ? "⚠ Yes" : "✓ No",
-          ],
-          ["Cache Hit", String(safeMetrics?.cache_hit ?? false)],
-          [
-            "Evaluation Framework",
-            "RAGAS",
-          ],
-        ];
-
-        telemetryFlags.forEach((flag) => {
-          pdf.setFont(undefined, "bold");
-          pdf.text(flag[0], 15, yPos);
-          pdf.setFont(undefined, "normal");
-          pdf.text(flag[1], 95, yPos);
-          yPos += 5;
-        });
-
-        yPos += 6;
-        addPageIfNeeded(50);
-
-        // Component Scores Visualization
-        pdf.setFontSize(11);
-        pdf.setFont(undefined, "bold");
-        pdf.setTextColor(41, 128, 185);
-        pdf.text("Visual: Best Pipeline Component Scores (/ 10)", 15, yPos);
-        pdf.setTextColor(0);
-        yPos += 8;
-
-        const scoreData = [
-          { label: "Relevance", key: "relevance", color: [52, 152, 219] },
-          {
-            label: "Groundedness",
-            key: "grounded",
-            color: [46, 204, 113],
-          },
-          { label: "Quality", key: "quality", color: [241, 196, 15] },
-          { label: "Efficiency", key: "efficiency", color: [230, 126, 34] },
-        ];
-
-        scoreData.forEach((item) => {
-          const score = bestScores[item.key] ?? 0;
-          const scoreVal = Math.min(10, Math.max(0, score));
-          const barWidth = (scoreVal / 10) * 100;
-
-          pdf.setFontSize(9);
-          pdf.setFont(undefined, "normal");
-          pdf.text(item.label, 15, yPos);
-
-          // Background bar
-          pdf.setFillColor(240, 240, 240);
-          pdf.rect(60, yPos - 2.5, 80, 4, "F");
-
-          // Filled bar
-          pdf.setFillColor(...item.color);
-          pdf.rect(60, yPos - 2.5, (barWidth / 100) * 80, 4, "F");
-
-          // Score value
-          pdf.setFont(undefined, "bold");
-          pdf.text(scoreVal.toFixed(2), 150, yPos);
-
-          yPos += 6;
-        });
-
-        yPos += 8;
-        addPageIfNeeded(30);
-
-        // Extended Evaluation Scores
-        pdf.setFontSize(11);
-        pdf.setFont(undefined, "bold");
-        pdf.setTextColor(41, 128, 185);
-        pdf.text("Extended Evaluation Metrics (RAGAS Framework)", 15, yPos);
-        pdf.setTextColor(0);
-        yPos += 8;
-
-        pdf.setFontSize(9);
-        pdf.setFont(undefined, "normal");
-        const extendedScores = [
-          ["Context Precision", ((bestScores.context_precision || 0.85) * 10).toFixed(2)],
-          ["Context Recall", ((bestScores.context_recall || 0.82) * 10).toFixed(2)],
-          ["Hallucination Score", (10 - ((1 - (bestScores.grounded || 1)) * 10)).toFixed(2)],
-        ];
-
-        const extColWidths = [90, 40];
-        pdf.setFont(undefined, "bold");
-        pdf.setFillColor(52, 152, 219);
-        pdf.setTextColor(255);
-        let extColX = 15;
-        ["Metric", "Score (/ 10)"].forEach((h, i) => {
-          pdf.rect(extColX, yPos, extColWidths[i], 6, "F");
-          pdf.text(h, extColX + 2, yPos + 4);
-          extColX += extColWidths[i];
-        });
-
-        yPos += 6;
-        pdf.setTextColor(0);
-        pdf.setFont(undefined, "normal");
-
-        extendedScores.forEach((row, idx) => {
-          extColX = 15;
-          pdf.setFillColor(idx % 2 === 0 ? 255 : 248);
-          pdf.rect(15, yPos, 130, 5, "F");
-          row.forEach((cell, i) => {
-            pdf.text(cell, extColX + 2, yPos + 3.5);
-            extColX += extColWidths[i];
-          });
-          yPos += 5;
-        });
+      let bestScores = {};
+      if (comparePipelines.length > 0) {
+        const bestPipelineData =
+          comparePipelines.find((p) => p.pipeline === queryData?.best_pipeline) ||
+          comparePipelines[0];
+        bestScores = bestPipelineData?.scores || {};
       }
 
-      // ═══════════════════════════════════════════════════════════
-      // SECTION 4: COMPARE MODE PIPELINE COMPARISON
-      // ═══════════════════════════════════════════════════════════
-      if (isCompareMode) {
-        addPageIfNeeded(40);
-        pdf.setFontSize(14);
-        pdf.setFont(undefined, "bold");
-        pdf.setTextColor(41, 128, 185);
-        pdf.text("PIPELINE COMPARISON", 15, yPos);
-        pdf.setTextColor(0);
-        yPos += 8;
+      // Header
+      pdf.setFontSize(20);
+      pdf.setFont(undefined, "bold");
+      setTextColor(palette.ink);
+      pdf.text("RAG Analytics Report", page.margin, yPos);
+      pdf.setFontSize(10);
+      pdf.setFont(undefined, "normal");
+      setTextColor(palette.muted);
+      pdf.text("Technical dashboard", page.margin, yPos + 6);
+      pdf.text("RANGO", page.margin + page.contentWidth, yPos, {
+        align: "right",
+      });
+      pdf.text(`Generated: ${timestamp}`, page.margin, yPos + 12);
+      const freshness = getQueryFreshnessLabel();
+      if (freshness) {
+        pdf.text(freshness, page.margin + page.contentWidth, yPos + 12, {
+          align: "right",
+        });
+      }
+      yPos += 18;
 
+      // Executive summary strip
+      pdf.setFillColor(...palette.accentSoft);
+      pdf.rect(page.margin, yPos, page.contentWidth, 16, "F");
+      pdf.setDrawColor(...palette.line);
+      pdf.rect(page.margin, yPos, page.contentWidth, 16);
+      const summaryItems = [
+        ["Total queries", leaderboard.total_questions ?? 0],
+        ["Best today", leaderboard.best_pipeline_today || "N/A"],
+        ["Avg latency", fmtMs(safeMetrics?.timings_ms?.total_ms || 0)],
+        ["Cost (this query)", fmtMoney(safeMetrics?.cost_usd || 0)],
+      ];
+      const colWidth = page.contentWidth / summaryItems.length;
+      summaryItems.forEach((item, idx) => {
+        const colX = page.margin + colWidth * idx + colWidth / 2;
+        pdf.setFontSize(7);
+        setTextColor(palette.muted);
+        pdf.text(item[0], colX, yPos + 6, { align: "center" });
+        pdf.setFontSize(10);
+        setTextColor(palette.ink);
+        pdf.text(String(item[1]), colX, yPos + 12, { align: "center" });
+      });
+      yPos += 22;
+
+      // System configuration
+      drawSectionTitle("System configuration");
+      const configRows = [
+        [
+          "Index type",
+          activeCollectionIndexType === "tree"
+            ? "Page Index (Tree)"
+            : "Vector Database",
+        ],
+        ["Retrieval strategy", "Similarity search"],
+        ["Distance metric", "Cosine similarity"],
+        ["Embedding model", "OpenAI embeddings"],
+        ["LLM model", safeMetrics?.model || "llama-3.3-70b-versatile"],
+        ["Chunk size", "1024"],
+        ["Chunk overlap", "128"],
+      ];
+      const cfgCols = [60, 120];
+      configRows.forEach((row, idx) => {
+        const rowY = yPos + idx * 5.5;
+        if (idx % 2 === 0) {
+          pdf.setFillColor(255, 255, 255);
+        } else {
+          pdf.setFillColor(...palette.panel);
+        }
+        pdf.rect(page.margin, rowY - 3.5, page.contentWidth, 5.5, "F");
+        pdf.setFontSize(8);
+        pdf.setFont(undefined, "bold");
+        setTextColor(palette.muted);
+        pdf.text(row[0], page.margin + 2, rowY);
         pdf.setFont(undefined, "normal");
-        pdf.setFontSize(9);
+        setTextColor(palette.ink);
+        pdf.text(row[1], page.margin + cfgCols[0], rowY);
+      });
+      yPos += configRows.length * 5.5 + 6;
 
-        const colWidths = [12, 50, 20, 20, 20, 20, 20];
-        const headers = [
-          "#",
-          "Pipeline",
-          "Relevance",
-          "Grounded",
-          "Quality",
-          "Efficiency",
-          "Final Score",
-        ];
+      // Current query analysis
+      if (queryData) {
+        drawSectionTitle("Current query");
+        const questionLines = pdf.splitTextToSize(
+          queryData.question || "N/A",
+          page.contentWidth - 4,
+        );
+        const answerLines = pdf.splitTextToSize(
+          queryData.final_answer || "N/A",
+          page.contentWidth - 4,
+        );
+        const clippedAnswer =
+          answerLines.length > 6
+            ? [...answerLines.slice(0, 6), "... (truncated)"]
+            : answerLines;
 
+        pdf.setFillColor(...palette.panel);
+        pdf.rect(page.margin, yPos, page.contentWidth, 28, "F");
+        pdf.setDrawColor(...palette.line);
+        pdf.rect(page.margin, yPos, page.contentWidth, 28);
+        pdf.setFontSize(8);
         pdf.setFont(undefined, "bold");
-        pdf.setFillColor(52, 152, 219);
-        pdf.setTextColor(255);
-        let colX = 15;
-        headers.forEach((h, i) => {
-          pdf.rect(colX, yPos, colWidths[i], 7, "F");
+        setTextColor(palette.muted);
+        pdf.text("Question", page.margin + 2, yPos + 5);
+        pdf.setFont(undefined, "normal");
+        setTextColor(palette.ink);
+        pdf.text(questionLines.slice(0, 2), page.margin + 2, yPos + 9);
+        pdf.setFont(undefined, "bold");
+        setTextColor(palette.muted);
+        pdf.text("Answer", page.margin + 2, yPos + 17);
+        pdf.setFont(undefined, "normal");
+        setTextColor(palette.ink);
+        pdf.text(clippedAnswer.slice(0, 2), page.margin + 2, yPos + 21);
+        yPos += 34;
+
+        pdf.setFontSize(8);
+        pdf.setFont(undefined, "bold");
+        setTextColor(palette.muted);
+        pdf.text("Best pipeline", page.margin, yPos);
+        pdf.setFont(undefined, "normal");
+        setTextColor(palette.ink);
+        pdf.text(queryData.best_pipeline || "N/A", page.margin + 30, yPos);
+        pdf.text(`Mode: ${mode}`, page.margin + 90, yPos);
+        yPos += 10;
+      }
+
+      // Performance dashboards
+      drawSectionTitle("Performance dashboards");
+      const cardGap = 6;
+      const cardWidth = (page.contentWidth - cardGap) / 2;
+      const cardHeight = 38;
+      const latencyRows = [
+        ["Total", fmtMs(safeMetrics?.timings_ms?.total_ms || 0)],
+        ["Embedding", fmtMs(safeMetrics?.timings_ms?.embedding_ms || 0)],
+        ["Retrieval", fmtMs(safeMetrics?.timings_ms?.retrieval_ms || 0)],
+        ["Rerank", fmtMs(safeMetrics?.timings_ms?.rerank_ms || 0)],
+        ["LLM", fmtMs(safeMetrics?.timings_ms?.llm_ms || 0)],
+      ];
+      const qualityRows = [
+        ["Relevance", (bestScores.relevance || 0).toFixed(2)],
+        [
+          "Grounded",
+          (bestScores.grounded || bestScores.groundedness || 0).toFixed(2),
+        ],
+        ["Quality", (bestScores.quality || 0).toFixed(2)],
+        ["Efficiency", (bestScores.efficiency || 0).toFixed(2)],
+        ["Tokens", fmtNum(safeMetrics?.tokens?.total_tokens || 0)],
+        ["Cost", fmtMoney(safeMetrics?.cost_usd || 0)],
+      ];
+      drawCard(page.margin, yPos, cardWidth, cardHeight, "Latency", latencyRows);
+      drawCard(
+        page.margin + cardWidth + cardGap,
+        yPos,
+        cardWidth,
+        cardHeight,
+        "Quality + cost",
+        qualityRows,
+      );
+      yPos += cardHeight + 10;
+
+      // Pipeline comparison grid
+      if (comparePipelines.length > 0) {
+        drawSectionTitle("Pipeline comparison");
+        const tableHeaders = [
+          "Pipeline",
+          "Final",
+          "Rel",
+          "Grnd",
+          "Qual",
+          "Eff",
+          "Retrieval",
+        ];
+        const colWidths = [50, 18, 16, 16, 16, 16, 22];
+        pdf.setFontSize(8);
+        pdf.setFont(undefined, "bold");
+        pdf.setFillColor(...palette.panel);
+        pdf.rect(page.margin, yPos, page.contentWidth, 6, "F");
+        let colX = page.margin;
+        tableHeaders.forEach((h, i) => {
+          setTextColor(palette.muted);
           pdf.text(h, colX + 2, yPos + 4);
           colX += colWidths[i];
         });
-
         yPos += 7;
-        pdf.setTextColor(0);
         pdf.setFont(undefined, "normal");
-
-        queryData.retrieval_comparison.slice(0, 8).forEach((p, idx) => {
-          const rowData = [
-            String(idx + 1),
-            p.pipeline.length > 30
-              ? p.pipeline.substring(0, 27) + "..."
+        comparePipelines.slice(0, 4).forEach((p, idx) => {
+          addPageIfNeeded(10);
+          colX = page.margin;
+          if (idx % 2 === 0) {
+            pdf.setFillColor(255, 255, 255);
+          } else {
+            pdf.setFillColor(...palette.panel);
+          }
+          pdf.rect(page.margin, yPos - 3.5, page.contentWidth, 6, "F");
+          setTextColor(palette.ink);
+          const cells = [
+            p.pipeline.length > 28
+              ? `${p.pipeline.substring(0, 25)}...`
               : p.pipeline,
-            `${(p.scores?.relevance ?? 0).toFixed(2)}`,
-            `${(p.scores?.grounded ?? p.scores?.groundedness ?? 0).toFixed(2)}`,
-            `${(p.scores?.quality ?? 0).toFixed(2)}`,
-            `${(p.scores?.efficiency ?? 0).toFixed(2)}`,
-            `${(p.scores?.final ?? 0).toFixed(2)}`,
+            (p.scores?.final ?? 0).toFixed(2),
+            (p.scores?.relevance ?? 0).toFixed(2),
+            (p.scores?.grounded ?? p.scores?.groundedness ?? 0).toFixed(2),
+            (p.scores?.quality ?? 0).toFixed(2),
+            (p.scores?.efficiency ?? 0).toFixed(2),
+            fmtMs((p.retrieval_time_sec || 0) * 1000),
           ];
-
-          colX = 15;
-          pdf.setFillColor(idx % 2 === 0 ? 255 : 248);
-          pdf.rect(15, yPos, 182, 6, "F");
-          rowData.forEach((cell, i) => {
-            pdf.text(cell, colX + 2, yPos + 4);
+          cells.forEach((cell, i) => {
+            pdf.text(String(cell), colX + 2, yPos);
             colX += colWidths[i];
           });
           yPos += 6;
-          addPageIfNeeded(10);
         });
-
-        yPos += 8;
-        addPageIfNeeded(50);
-
-        // Per-Pipeline Latency Breakdown
-        pdf.setFontSize(14);
-        pdf.setFont(undefined, "bold");
-        pdf.setTextColor(41, 128, 185);
-        pdf.text("PER-PIPELINE LATENCY BREAKDOWN", 15, yPos);
-        pdf.setTextColor(0);
-        yPos += 8;
-
-        pdf.setFontSize(9);
-        const latColWidths = [12, 50, 30, 30, 30, 30];
-        const latHeaders = [
-          "#",
-          "Pipeline",
-          "Retrieval",
-          "Context Build",
-          "Scoring",
-          "Total",
-        ];
-
-        pdf.setFont(undefined, "bold");
-        pdf.setFillColor(52, 152, 219);
-        pdf.setTextColor(255);
-        let latColX = 15;
-        latHeaders.forEach((h, i) => {
-          pdf.rect(latColX, yPos, latColWidths[i], 7, "F");
-          pdf.text(h, latColX + 2, yPos + 4);
-          latColX += latColWidths[i];
-        });
-
-        yPos += 7;
-        pdf.setTextColor(0);
-        pdf.setFont(undefined, "normal");
-
-        queryData.retrieval_comparison.slice(0, 8).forEach((p, idx) => {
-          const timing = p.timing || {};
-          const latRow = [
-            String(idx + 1),
-            p.pipeline.length > 25
-              ? p.pipeline.substring(0, 22) + "..."
-              : p.pipeline,
-            fmtMs(timing.retrieval_ms || 0),
-            fmtMs(timing.context_build_ms || 0),
-            fmtMs(timing.scoring_ms || 0),
-            fmtMs(
-              (timing.retrieval_ms || 0) +
-                (timing.context_build_ms || 0) +
-                (timing.scoring_ms || 0),
-            ),
-          ];
-
-          latColX = 15;
-          pdf.setFillColor(idx % 2 === 0 ? 255 : 248);
-          pdf.rect(15, yPos, 182, 6, "F");
-          latRow.forEach((cell, i) => {
-            pdf.text(cell, latColX + 2, yPos + 4);
-            latColX += latColWidths[i];
-          });
-          yPos += 6;
-          addPageIfNeeded(10);
-        });
+        yPos += 6;
       }
 
-      // ═══════════════════════════════════════════════════════════
-      // SECTION 5: GLOBAL LEADERBOARD
-      // ═══════════════════════════════════════════════════════════
-      addPageIfNeeded(40);
-      pdf.setFontSize(14);
-      pdf.setFont(undefined, "bold");
-      pdf.setTextColor(41, 128, 185);
-      pdf.text("GLOBAL LEADERBOARD - TOP PERFORMERS", 15, yPos);
-      pdf.setTextColor(0);
-      yPos += 8;
-
-      if (leaderboard.pipelines && leaderboard.pipelines.length > 0) {
-        // Summary info
-        pdf.setFontSize(10);
-        pdf.setFont(undefined, "bold");
-        pdf.text(
-          `Total Questions Analyzed: ${leaderboard.total_questions}`,
-          15,
-          yPos,
-        );
+      // Leaderboard snapshot
+      if (filteredLeaderboardPipelines.length > 0) {
+        drawSectionTitle("Leaderboard snapshot");
+        pdf.setFontSize(8);
         pdf.setFont(undefined, "normal");
-        if (queryData?.best_pipeline) {
-          pdf.text(`Best Pipeline Today: ${queryData.best_pipeline}`, 100, yPos);
-        }
-        yPos += 7;
-
-        // Leaderboard table
-        pdf.setFontSize(9);
-        const leaderboardCols = [12, 60, 20, 15, 20, 25];
-        const leaderboardHeaders = [
-          "Rank",
-          "Pipeline",
-          "Score",
-          "Wins",
-          "Win Rate",
-          "Avg Retrieval",
-        ];
-
-        pdf.setFont(undefined, "bold");
-        pdf.setFillColor(52, 152, 219);
-        pdf.setTextColor(255);
-        let lbColX = 15;
-        leaderboardHeaders.forEach((h, i) => {
-          pdf.rect(lbColX, yPos, leaderboardCols[i], 7, "F");
-          pdf.text(h, lbColX + 2, yPos + 4);
-          lbColX += leaderboardCols[i];
-        });
-
-        yPos += 7;
-        pdf.setTextColor(0);
-        pdf.setFont(undefined, "normal");
-
-        leaderboard.pipelines.slice(0, 10).forEach((p, idx) => {
-          const scoreDisp =
+        filteredLeaderboardPipelines.slice(0, 4).forEach((p, idx) => {
+          const score =
             p.leaderboard_score != null
               ? `${(p.leaderboard_score * 100).toFixed(1)}%`
-              : p.avg_final_score.toFixed(3);
-          const rMs =
-            p.avg_retrieval_ms ||
-            (p.avg_retrieval_time_sec
-              ? (p.avg_retrieval_time_sec * 1000).toFixed(0)
-              : "N/A");
-          const row = [
-            String(idx + 1),
-            p.pipeline.length > 30
-              ? p.pipeline.substring(0, 27) + "..."
+              : p.avg_final_score.toFixed(2);
+          if (idx % 2 === 0) {
+            pdf.setFillColor(255, 255, 255);
+          } else {
+            pdf.setFillColor(...palette.panel);
+          }
+          pdf.rect(page.margin, yPos - 3.5, page.contentWidth, 6, "F");
+          setTextColor(palette.ink);
+          pdf.text(`#${idx + 1}`, page.margin + 2, yPos);
+          pdf.text(
+            p.pipeline.length > 40
+              ? `${p.pipeline.substring(0, 37)}...`
               : p.pipeline,
-            scoreDisp,
-            String(p.wins),
-            `${(p.win_rate * 100).toFixed(1)}%`,
-            typeof rMs === "string" && rMs.includes("ms") ? rMs : `${rMs}ms`,
-          ];
-
-          lbColX = 15;
-          pdf.setFillColor(idx % 2 === 0 ? 255 : 248);
-          pdf.rect(15, yPos, 182, 6, "F");
-          row.forEach((cell, i) => {
-            pdf.text(cell, lbColX + 2, yPos + 4);
-            lbColX += leaderboardCols[i];
+            page.margin + 14,
+            yPos,
+          );
+          setTextColor(palette.muted);
+          pdf.text(score, page.margin + page.contentWidth - 2, yPos, {
+            align: "right",
           });
           yPos += 6;
-          addPageIfNeeded(10);
         });
-
-        yPos += 10;
-        addPageIfNeeded(50);
-
-        // Win Rate Visualization
-        pdf.setFontSize(12);
-        pdf.setFont(undefined, "bold");
-        pdf.setTextColor(41, 128, 185);
-        pdf.text("Visual: Historic Win Rate (%)", 15, yPos);
-        pdf.setTextColor(0);
-        yPos += 8;
-
-        const maxWinRate = Math.max(...leaderboard.pipelines.slice(0, 6).map(p => p.win_rate || 0));
-
-        leaderboard.pipelines.slice(0, 6).forEach((p, idx) => {
-          const winRate = (p.win_rate || 0) * 100;
-          const pipeName = p.pipeline.length > 25 ? p.pipeline.substring(0, 22) + "..." : p.pipeline;
-          const barWidth = maxWinRate > 0 ? (winRate / (maxWinRate * 100)) * 100 : 0;
-
-          pdf.setFontSize(9);
-          pdf.setFont(undefined, "normal");
-          pdf.text(pipeName, 15, yPos);
-
-          // Background bar
-          pdf.setFillColor(240, 240, 240);
-          pdf.rect(100, yPos - 2.5, 80, 4, "F");
-
-          // Filled bar (orange color for win rate)
-          pdf.setFillColor(241, 196, 15);
-          pdf.rect(100, yPos - 2.5, (barWidth / 100) * 80, 4, "F");
-
-          // Win rate percentage
-          pdf.setFont(undefined, "bold");
-          pdf.text(`${winRate.toFixed(1)}%`, 185, yPos);
-
-          yPos += 6;
-        });
+        yPos += 6;
       }
 
-      yPos += 8;
-      addPageIfNeeded(40);
-
-      // ═══════════════════════════════════════════════════════════
-      // SECTION 5B: EXTENDED LATENCY ANALYSIS
-      // ═══════════════════════════════════════════════════════════
-      pdf.setFontSize(12);
-      pdf.setFont(undefined, "bold");
-      pdf.setTextColor(41, 128, 185);
-      pdf.text("Latency Performance Distribution", 15, yPos);
-      pdf.setTextColor(0);
-      yPos += 8;
-
-      pdf.setFontSize(9);
+      // Appendix
+      drawSectionTitle("Appendix");
+      pdf.setFontSize(8);
       pdf.setFont(undefined, "normal");
-      const latencyAnalysis = [
-        ["Pipeline", "Avg (ms)", "P95 (ms)", "Min (ms)", "Max (ms)"],
+      setTextColor(palette.muted);
+      const appendixRows = [
+        ["Report ID", reportId],
+        ["Query ID", queryId],
+        [
+          "Environment",
+          activeCollectionIndexType === "tree" ? "Development" : "Production",
+        ],
+        ["Collection", activeCollectionName || "N/A"],
+        ["Suggested filename", suggestedFilename],
       ];
-
-      // Add data for top 5 pipelines
-      leaderboard.pipelines?.slice(0, 5).forEach((p) => {
-        const avgMs = p.avg_retrieval_ms || 0;
-        const p95Ms = Math.round(avgMs * 1.3);
-        const minMs = Math.round(avgMs * 0.7);
-        const maxMs = Math.round(avgMs * 1.8);
-
-        latencyAnalysis.push([
-          p.pipeline.length > 20
-            ? p.pipeline.substring(0, 17) + "..."
-            : p.pipeline,
-          `${avgMs.toFixed(0)}`,
-          `${p95Ms}`,
-          `${minMs}`,
-          `${maxMs}`,
-        ]);
-      });
-
-      const latDist = [40, 25, 25, 25, 25];
-      pdf.setFont(undefined, "bold");
-      pdf.setFillColor(52, 152, 219);
-      pdf.setTextColor(255);
-      let latDistX = 15;
-      latencyAnalysis[0].forEach((h, i) => {
-        pdf.rect(latDistX, yPos, latDist[i], 6, "F");
-        pdf.text(h, latDistX + 2, yPos + 4);
-        latDistX += latDist[i];
-      });
-
-      yPos += 6;
-      pdf.setTextColor(0);
-      pdf.setFont(undefined, "normal");
-
-      latencyAnalysis.slice(1).forEach((row, idx) => {
-        latDistX = 15;
-        pdf.setFillColor(idx % 2 === 0 ? 255 : 248);
-        pdf.rect(15, yPos, 140, 5, "F");
-        row.forEach((cell, i) => {
-          pdf.text(cell, latDistX + 2, yPos + 3.5);
-          latDistX += latDist[i];
-        });
+      appendixRows.forEach((row, idx) => {
+        pdf.text(`${row[0]}:`, page.margin, yPos);
+        setTextColor(palette.ink);
+        pdf.text(String(row[1]), page.margin + 40, yPos);
+        setTextColor(palette.muted);
         yPos += 5;
-        addPageIfNeeded(10);
       });
 
-      // ═══════════════════════════════════════════════════════════
-      // SECTION 6: KEY PERFORMANCE INSIGHTS
-      // ═══════════════════════════════════════════════════════════
-      addPageIfNeeded(60);
-      pdf.setFontSize(14);
-      pdf.setFont(undefined, "bold");
-      pdf.setTextColor(41, 128, 185);
-      pdf.text("KEY PERFORMANCE INSIGHTS", 15, yPos);
-      pdf.setTextColor(0);
-      yPos += 10;
-
-      if (queryData) {
-        const insights = [];
-
-        const totalLatency = safeMetrics?.timings_ms?.total_ms || 0;
-        if (totalLatency > 5000) {
-          insights.push(
-            "High Latency: Total latency exceeds 5 seconds. Consider optimizing retrieval or LLM response time.",
-          );
-        } else if (totalLatency < 1000) {
-          insights.push(
-            "Excellent Performance: Response time is under 1 second, indicating efficient pipeline execution.",
-          );
-        }
-
-        const relevanceScore = bestScores.relevance || 0;
-        if (relevanceScore < 5) {
-          insights.push(
-            "Low Relevance: Retrieved documents may not be relevant. Consider adjusting search parameters or chunk size.",
-          );
-        } else if (relevanceScore >= 8) {
-          insights.push(
-            "Strong Relevance: Retrieved documents are highly relevant to the query.",
-          );
-        }
-
-        const groundedness = bestScores.grounded || 0;
-        if (groundedness < 7) {
-          insights.push(
-            "Grounding Issues: Generated answer contains information not fully grounded in retrieved documents.",
-          );
-        }
-
-        const efficiency = bestScores.efficiency || 0;
-        if (efficiency < 6) {
-          insights.push(
-            "Lower Efficiency: Consider using fewer chunks or optimizing token usage.",
-          );
-        }
-
-        pdf.setFontSize(9);
-        pdf.setFont(undefined, "normal");
-
-        if (insights.length > 0) {
-          insights.slice(0, 5).forEach((insight, idx) => {
-            const lines = pdf.splitTextToSize(`• ${insight}`, 175);
-            pdf.text(lines, 18, yPos);
-            yPos += lines.length * 4 + 2;
-            addPageIfNeeded(15);
-          });
-        } else {
-          pdf.text("• Pipeline is performing well across all metrics.", 18, yPos);
-          yPos += 5;
-        }
-      }
-
-      yPos += 8;
-      addPageIfNeeded(60);
-
-      // ═══════════════════════════════════════════════════════════
-      // SECTION 7: RECOMMENDATIONS
-      // ═══════════════════════════════════════════════════════════
-      pdf.setFontSize(14);
-      pdf.setFont(undefined, "bold");
-      pdf.setTextColor(41, 128, 185);
-      pdf.text("RECOMMENDATIONS", 15, yPos);
-      pdf.setTextColor(0);
-      yPos += 10;
-
-      pdf.setFontSize(9);
-      pdf.setFont(undefined, "normal");
-      const recommendations = [];
-
-      if (
-        queryData.retrieval_comparison &&
-        queryData.retrieval_comparison.length > 1
-      ) {
-        const topPipeline = queryData.retrieval_comparison[0];
-        const bottomPipeline = queryData.retrieval_comparison[
-          queryData.retrieval_comparison.length - 1
-        ];
-        recommendations.push(
-          `Primary: Deploy "${topPipeline.pipeline}" pipeline for optimal performance.`,
-        );
-        recommendations.push(
-          `Review: "${bottomPipeline.pipeline}" underperforms; evaluate configuration adjustments.`,
-        );
-      }
-
-      if ((bestScores.relevance || 0) < 5) {
-        recommendations.push("Optimize chunk size or retrieval parameters.");
-      }
-
-      if ((bestScores.grounded || 0) < 7) {
-        recommendations.push("Enhance grounding by refining context and LLM prompt.");
-      }
-
-      if ((safeMetrics?.timings_ms?.retrieval_ms || 0) > 3000) {
-        recommendations.push("Cache frequently accessed documents to reduce retrieval latency.");
-      }
-
-      recommendations.push("Monitor performance over time and adjust based on evolving requirements.");
-      recommendations.push("Regularly analyze user feedback to identify improvements.");
-
-      recommendations.slice(0, 6).forEach((rec, idx) => {
-        const lines = pdf.splitTextToSize(`${idx + 1}. ${rec}`, 175);
-        pdf.text(lines, 18, yPos);
-        yPos += lines.length * 4 + 2;
-        addPageIfNeeded(15);
-      });
-
-      yPos += 8;
-      addPageIfNeeded(60);
-
-      // ═══════════════════════════════════════════════════════════
-      // SECTION 8: PERFORMANCE ANALYSIS SUMMARY
-      // ═══════════════════════════════════════════════════════════
-      pdf.setFontSize(14);
-      pdf.setFont(undefined, "bold");
-      pdf.setTextColor(41, 128, 185);
-      pdf.text("PERFORMANCE ANALYSIS SUMMARY", 15, yPos);
-      pdf.setTextColor(0);
-      yPos += 10;
-
-      pdf.setFontSize(9);
-      pdf.setFont(undefined, "normal");
-
-      // Performance breakdown
-      const totalLatency = safeMetrics?.timings_ms?.total_ms || 0;
-      const perfBreakdown = [
-        ["Metric", "Value", "Status"],
-        [
-          "Total Latency",
-          `${fmtMs(totalLatency)}`,
-          totalLatency < 3000 ? "✓ Good" : "⚠ High",
-        ],
-        [
-          "Embedding Time",
-          `${fmtMs(safeMetrics?.timings_ms?.embedding_ms || 0)}`,
-          (safeMetrics?.timings_ms?.embedding_ms || 0) < 2000 ? "✓" : "⚠",
-        ],
-        [
-          "Retrieval Time",
-          `${fmtMs(safeMetrics?.timings_ms?.retrieval_ms || 0)}`,
-          (safeMetrics?.timings_ms?.retrieval_ms || 0) < 2000 ? "✓" : "⚠",
-        ],
-        [
-          "LLM Response",
-          `${fmtMs(safeMetrics?.timings_ms?.llm_ms || 0)}`,
-          (safeMetrics?.timings_ms?.llm_ms || 0) < 2000 ? "✓" : "⚠",
-        ],
-        [
-          "Total Tokens",
-          fmtNum(safeMetrics?.tokens?.total_tokens || 0),
-          "Info",
-        ],
-        [
-          "Cost",
-          fmtMoney(safeMetrics?.cost_usd || 0),
-          "Info",
-        ],
-      ];
-
-      const summaryColWidths = [50, 40, 30];
-      const summaryHeaderBg = [52, 152, 219];
-
-      pdf.setFont(undefined, "bold");
-      pdf.setFillColor(...summaryHeaderBg);
-      pdf.setTextColor(255);
-      let summaryX = 15;
-      perfBreakdown[0].forEach((h, i) => {
-        pdf.rect(summaryX, yPos, summaryColWidths[i], 6, "F");
-        pdf.text(h, summaryX + 2, yPos + 4);
-        summaryX += summaryColWidths[i];
-      });
-
-      yPos += 6;
-      pdf.setTextColor(0);
-      pdf.setFont(undefined, "normal");
-
-      perfBreakdown.slice(1).forEach((row, idx) => {
-        summaryX = 15;
-        pdf.setFillColor(idx % 2 === 0 ? 255 : 248);
-        pdf.rect(15, yPos, 120, 5, "F");
-        row.forEach((cell, i) => {
-          pdf.text(cell, summaryX + 2, yPos + 3.5);
-          summaryX += summaryColWidths[i];
-        });
-        yPos += 5;
-        addPageIfNeeded(10);
-      });
-
-      // Add page numbers to all pages
+      // Page numbers
       const totalPages = pdf.getNumberOfPages();
       for (let i = 1; i <= totalPages; i++) {
         pdf.setPage(i);
-        pdf.setFontSize(10);
+        pdf.setFontSize(8);
         pdf.setFont(undefined, "normal");
-        pdf.setTextColor(150);
-        pdf.text(`Page ${i} of ${totalPages}`, 180, 285, { align: "right" });
+        setTextColor(palette.muted);
+        pdf.text(`Page ${i} of ${totalPages}`, 195, 288, { align: "right" });
       }
 
       pdf.save(
-        `RAG_${isCompareMode ? "Compare" : "Fast"}_Report_${timestamp.replace(/[: ]/g, "_")}.pdf`,
+        `RAG_Analytics_Report_${timestamp.replace(/[: ]/g, "_")}.pdf`,
       );
       toast.success("Comprehensive analytics PDF downloaded");
     } catch (error) {
@@ -2445,9 +1973,45 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
   // --------------------------------
   // Charts
   // --------------------------------
+  const allowedPipelineNames = useMemo(
+    () =>
+      getAllowedPipelineNames(
+        customEnabled,
+        customConfig.pipeline_name || customConfig.preset_name,
+      ),
+    [customEnabled, customConfig.pipeline_name, customConfig.preset_name],
+  );
+
+  const allowedLeaderboardNames = useMemo(() => {
+    const allowed = new Set(SYSTEM_PIPELINE_NAMES);
+    const customName = (
+      customConfig.pipeline_name ||
+      customConfig.preset_name ||
+      ""
+    ).trim();
+    const hasCustom = leaderboard?.pipelines?.some(
+      (p) => p.pipeline === CUSTOM_PIPELINE_NAME,
+    );
+    if (customEnabled || hasCustom) {
+      allowed.add(customName || CUSTOM_PIPELINE_NAME);
+      allowed.add(CUSTOM_PIPELINE_NAME);
+    }
+    return allowed;
+  }, [leaderboard, customEnabled, customConfig.pipeline_name, customConfig.preset_name]);
+
+  const filteredLeaderboardPipelines = useMemo(() => {
+    if (!leaderboard?.pipelines) return [];
+    return leaderboard.pipelines.filter((p) =>
+      allowedLeaderboardNames.has(p.pipeline),
+    );
+  }, [leaderboard, allowedLeaderboardNames]);
+
   const pipelineData = useMemo(
-    () => askRes?.retrieval_comparison ?? [],
-    [askRes],
+    () =>
+      (askRes?.retrieval_comparison ?? []).filter((p) =>
+        allowedPipelineNames.has(p.pipeline),
+      ),
+    [askRes, allowedPipelineNames],
   );
 
   const labels = useMemo(
@@ -2728,19 +2292,54 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
       const res = await api.get(`/collections/${collectionId}/custom-pipeline`);
       const cfg = res.data?.custom_pipeline;
       if (cfg) {
+        const pipelineName = cfg.pipeline_name || cfg.preset_name || "Custom";
         setCustomEnabled(!!cfg.enabled);
         setCustomConfig({
-          preset_name: cfg.preset_name || "Custom",
+          pipeline_name: pipelineName,
+          preset_name: pipelineName,
           chunk_size: cfg.chunk_size ?? 800,
           overlap: cfg.overlap ?? 120,
           top_k: cfg.top_k ?? 6,
           search_type: cfg.search_type || "mmr",
+          index_status: cfg.index_status || (cfg.enabled ? "not_built" : "disabled"),
+          chunks_created: cfg.chunks_created ?? 0,
+          build_time_sec: cfg.build_time_sec ?? null,
+          updated_at: cfg.updated_at ?? null,
+        });
+        setCustomDirty(false);
+      } else {
+        setCustomEnabled(false);
+        setCustomConfig({
+          pipeline_name: "Custom",
+          preset_name: "Custom",
+          chunk_size: 800,
+          overlap: 120,
+          top_k: 6,
+          search_type: "mmr",
+          index_status: "not_built",
+          chunks_created: 0,
+          build_time_sec: null,
+          updated_at: null,
         });
         setCustomDirty(false);
       }
     } catch {
       // Keep defaults
       console.log("No saved custom pipeline, using defaults");
+      setCustomEnabled(false);
+      setCustomConfig({
+        pipeline_name: "Custom",
+        preset_name: "Custom",
+        chunk_size: 800,
+        overlap: 120,
+        top_k: 6,
+        search_type: "mmr",
+        index_status: "not_built",
+        chunks_created: 0,
+        build_time_sec: null,
+        updated_at: null,
+      });
+      setCustomDirty(false);
     } finally {
       setCustomLoading(false);
     }
@@ -2751,32 +2350,67 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
     setCustomSaving(true);
     try {
       const api = await axiosAuth();
-      await api.post(`/collections/${collectionId}/custom-pipeline`, {
+      const pipelineName =
+        (customConfig.pipeline_name || customConfig.preset_name || "").trim() ||
+        "Custom";
+      const res = await api.post(`/collections/${collectionId}/custom-pipeline`, {
         enabled: customEnabled,
         ...customConfig,
+        pipeline_name: pipelineName,
+        preset_name: pipelineName,
       });
+      const saved = res.data?.custom_pipeline;
+      if (saved) {
+        const savedName = saved.pipeline_name || saved.preset_name || pipelineName;
+        setCustomEnabled(!!saved.enabled);
+        setCustomConfig({
+          pipeline_name: savedName,
+          preset_name: savedName,
+          chunk_size: saved.chunk_size ?? 800,
+          overlap: saved.overlap ?? 120,
+          top_k: saved.top_k ?? 6,
+          search_type: saved.search_type || "mmr",
+          index_status: saved.index_status || "not_built",
+          chunks_created: saved.chunks_created ?? 0,
+          build_time_sec: saved.build_time_sec ?? null,
+          updated_at: saved.updated_at ?? null,
+        });
+      }
       setCustomDirty(false);
-      toast.success("Custom pipeline saved");
-    } catch {
-      toast.error("Failed to save custom pipeline.");
+      toast.success(
+        customEnabled
+          ? "Custom pipeline saved and built"
+          : "Custom pipeline saved",
+      );
+    } catch (err) {
+      toast.error(extractErrorMessage(err, "Failed to save custom pipeline."));
     } finally {
       setCustomSaving(false);
     }
   };
 
   const applyRecommended = () => {
-    setCustomConfig({
-      preset_name: "Custom",
+    setCustomConfig((prev) => ({
+      ...prev,
       chunk_size: 900,
       overlap: 150,
       top_k: 8,
       search_type: "mmr",
-    });
+      index_status: "not_built",
+      chunks_created: 0,
+      build_time_sec: null,
+    }));
     setCustomDirty(true);
   };
 
   const updateCustomField = (field, value) => {
-    setCustomConfig((prev) => ({ ...prev, [field]: value }));
+    setCustomConfig((prev) => ({
+      ...prev,
+      [field]: value,
+      index_status: "not_built",
+      chunks_created: 0,
+      build_time_sec: null,
+    }));
     setCustomDirty(true);
   };
 
@@ -3925,6 +3559,19 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
 
               <div className="configGrid">
                 <div>
+                  <label className="mini">Pipeline Name</label>
+                  <input
+                    type="text"
+                    className="claudeInput"
+                    value={customConfig.pipeline_name || customConfig.preset_name}
+                    onChange={(e) =>
+                      updateCustomField("pipeline_name", e.target.value)
+                    }
+                    placeholder="My Custom Pipeline"
+                    maxLength={40}
+                  />
+                </div>
+                <div>
                   <label className="mini">Chunk Size</label>
                   <input
                     type="number"
@@ -3933,9 +3580,9 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
                     onChange={(e) =>
                       updateCustomField("chunk_size", parseInt(e.target.value))
                     }
-                    min="100"
-                    max="2000"
-                    step="50"
+                    min="50"
+                    max="5000"
+                    step="10"
                   />
                 </div>
                 <div>
@@ -3948,8 +3595,8 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
                       updateCustomField("overlap", parseInt(e.target.value))
                     }
                     min="0"
-                    max="500"
-                    step="10"
+                    max="2000"
+                    step="5"
                   />
                 </div>
                 <div>
@@ -3962,7 +3609,7 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
                       updateCustomField("top_k", parseInt(e.target.value))
                     }
                     min="1"
-                    max="20"
+                    max="100"
                   />
                 </div>
                 <div>
@@ -3994,23 +3641,27 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
                     <span className="btnSpinner" /> Saving...
                   </>
                 ) : customDirty ? (
-                  "Save Custom Pipeline *"
+                  "Save & Build Custom Pipeline *"
                 ) : (
-                  "Save Custom Pipeline"
+                  "Save & Build Custom Pipeline"
                 )}
               </button>
 
               <div className="mini" style={{ marginTop: 10 }}>
                 In Compare mode the system runs 4 defaults + this optional
-                custom pipeline with your custom chunk settings.
-              </div>
-              <div className="mini" style={{ fontStyle: "italic" }}>
-                All settings below are fully customizable: Adjust chunk size,
-                overlap, top-K, and search type as needed.
+                custom pipeline with your saved custom chunk settings.
               </div>
               <div className="mini">
-                Current: {customConfig.chunk_size}ch | {customConfig.overlap}ov
-                | k{customConfig.top_k} | {customConfig.search_type}
+                Build: {customConfig.index_status || "not_built"}
+                {customConfig.chunks_created
+                  ? ` · ${customConfig.chunks_created} chunks`
+                  : ""}
+                {customConfig.build_time_sec
+                  ? ` · ${customConfig.build_time_sec}s`
+                  : ""}
+              </div>
+              <div className="mini">
+                Current: {customConfig.pipeline_name || customConfig.preset_name || "Custom"} · {customConfig.chunk_size}ch | {customConfig.overlap}ov | k{customConfig.top_k} | {customConfig.search_type}
               </div>
             </>
           )}
@@ -4414,22 +4065,116 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
             {safeMetrics?.timings_ms && (
               <div style={{ marginTop: 16 }}>
                 <div className="perfTitle">Latency Stages</div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-                  <div style={{ padding: "8px", background: "var(--c-secondary-bg)", borderRadius: "4px" }}>
-                    <div style={{ fontSize: "11px", color: "var(--c-muted)", fontWeight: 500 }}>Embedding</div>
-                    <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--c-text)" }}>{fmtMs(safeMetrics?.timings_ms?.embedding_ms || 0)}</div>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "8px",
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: "8px",
+                      background: "var(--c-secondary-bg)",
+                      borderRadius: "4px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "11px",
+                        color: "var(--c-muted)",
+                        fontWeight: 500,
+                      }}
+                    >
+                      Embedding
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "14px",
+                        fontWeight: 700,
+                        color: "var(--c-text)",
+                      }}
+                    >
+                      {fmtMs(safeMetrics?.timings_ms?.embedding_ms || 0)}
+                    </div>
                   </div>
-                  <div style={{ padding: "8px", background: "var(--c-secondary-bg)", borderRadius: "4px" }}>
-                    <div style={{ fontSize: "11px", color: "var(--c-muted)", fontWeight: 500 }}>Retrieval</div>
-                    <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--c-text)" }}>{fmtMs(safeMetrics?.timings_ms?.retrieval_ms || 0)}</div>
+                  <div
+                    style={{
+                      padding: "8px",
+                      background: "var(--c-secondary-bg)",
+                      borderRadius: "4px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "11px",
+                        color: "var(--c-muted)",
+                        fontWeight: 500,
+                      }}
+                    >
+                      Retrieval
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "14px",
+                        fontWeight: 700,
+                        color: "var(--c-text)",
+                      }}
+                    >
+                      {fmtMs(safeMetrics?.timings_ms?.retrieval_ms || 0)}
+                    </div>
                   </div>
-                  <div style={{ padding: "8px", background: "var(--c-secondary-bg)", borderRadius: "4px" }}>
-                    <div style={{ fontSize: "11px", color: "var(--c-muted)", fontWeight: 500 }}>Rerank</div>
-                    <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--c-text)" }}>{fmtMs(safeMetrics?.timings_ms?.rerank_ms || 0)}</div>
+                  <div
+                    style={{
+                      padding: "8px",
+                      background: "var(--c-secondary-bg)",
+                      borderRadius: "4px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "11px",
+                        color: "var(--c-muted)",
+                        fontWeight: 500,
+                      }}
+                    >
+                      Rerank
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "14px",
+                        fontWeight: 700,
+                        color: "var(--c-text)",
+                      }}
+                    >
+                      {fmtMs(safeMetrics?.timings_ms?.rerank_ms || 0)}
+                    </div>
                   </div>
-                  <div style={{ padding: "8px", background: "var(--c-secondary-bg)", borderRadius: "4px" }}>
-                    <div style={{ fontSize: "11px", color: "var(--c-muted)", fontWeight: 500 }}>LLM</div>
-                    <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--c-text)" }}>{fmtMs(safeMetrics?.timings_ms?.llm_ms || 0)}</div>
+                  <div
+                    style={{
+                      padding: "8px",
+                      background: "var(--c-secondary-bg)",
+                      borderRadius: "4px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "11px",
+                        color: "var(--c-muted)",
+                        fontWeight: 500,
+                      }}
+                    >
+                      LLM
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "14px",
+                        fontWeight: 700,
+                        color: "var(--c-text)",
+                      }}
+                    >
+                      {fmtMs(safeMetrics?.timings_ms?.llm_ms || 0)}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -5030,7 +4775,7 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
                 </div>
               </div>
 
-              {leaderboard.pipelines?.map((p, i) => {
+              {filteredLeaderboardPipelines.map((p, i) => {
                 const label = `Pipeline ${i + 1}`;
                 const scoreDisplay =
                   p.leaderboard_score != null
@@ -5575,7 +5320,17 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
         }}
       >
         {/* Animated Background */}
-        <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, pointerEvents: "none" }}>
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 0,
+            pointerEvents: "none",
+          }}
+        >
           <Silk
             speed={5}
             scale={1}
@@ -6016,6 +5771,28 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
             </div>
           </div>
           <div className="rightPanelBody">
+            <div className="rpSection">
+              <div className="rpSectionTitle">
+                <BarChart3 size={14} style={{ marginRight: 6 }} /> Overview
+              </div>
+              <div className="rpMetaGrid">
+                <div className="rpMetaRow">
+                  <span className="rpMetaLabel">Collection</span>
+                  <span className="rpMetaValue">
+                    {activeCollectionName || "N/A"}
+                  </span>
+                </div>
+                <div className="rpMetaRow">
+                  <span className="rpMetaLabel">Mode</span>
+                  <span className="rpMetaValue">{mode}</span>
+                </div>
+                <div className="rpMetaRow">
+                  <span className="rpMetaLabel">Range</span>
+                  <span className="rpMetaValue">{leaderboardRange}</span>
+                </div>
+              </div>
+            </div>
+
             {/* Chat Session Summary — only in chat mode */}
             {mode === "chat" &&
               Object.keys(chatAnalytics).length > 0 &&
@@ -6056,21 +5833,9 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
                         <div className="rpStatValue">{smartCount}</div>
                       </div>
                     </div>
-                    <div
-                      className="mini"
-                      style={{ marginTop: 8, fontWeight: 600 }}
-                    >
-                      Top Pipeline
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 13,
-                        marginTop: 4,
-                        color: "var(--c-accent)",
-                        fontWeight: 500,
-                      }}
-                    >
-                      {topPipeline}
+                    <div className="rpMetaRow" style={{ marginTop: 8 }}>
+                      <span className="rpMetaLabel">Top pipeline</span>
+                      <span className="rpMetaValue">{topPipeline}</span>
                     </div>
                   </div>
                 );
@@ -6082,7 +5847,7 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
                 {mode === "compare" ? (
                   <DetailedMetricsPanel
                     result={askRes}
-                    retrieval_comparison={askRes.retrieval_comparison}
+                    retrieval_comparison={pipelineData}
                   />
                 ) : (
                   <div style={{ padding: "0 10px" }}>
@@ -6134,7 +5899,7 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
                       <Trophy size={14} style={{ marginRight: 6 }} /> This
                       Chat's Ranking
                     </div>
-                    {ranked.map((p, i) => (
+                    {ranked.slice(0, 4).map((p, i) => (
                       <div
                         key={i}
                         className={`rpPipeRow ${i === 0 ? "winner" : ""}`}
@@ -6203,7 +5968,10 @@ ${(data.citations || []).length ? data.citations.map((c, idx) => `${idx + 1}. ${
                     </div>
                   </div>
                 </div>
-                {leaderboard.pipelines?.slice(0, 3).map((p, i) => {
+                <div className="rpCaption">
+                  Range: {leaderboardRange} · Mode: {leaderboardMode}
+                </div>
+                {filteredLeaderboardPipelines.slice(0, 3).map((p, i) => {
                   const label = `Pipeline ${i + 1}`;
                   const scoreDisplay =
                     p.leaderboard_score != null

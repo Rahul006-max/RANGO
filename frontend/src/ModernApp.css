@@ -2983,8 +2983,8 @@ html[data-theme="dark"] .authGate {
   background: var(--c-surface);
   border: 1px solid var(--c-border);
   border-radius: var(--radius-md);
-  padding: 14px 16px;
-  margin-bottom: 10px;
+  padding: 16px;
+  margin-bottom: 12px;
   box-shadow: var(--shadow-sm);
 }
 .rpSection:last-child {
@@ -3006,7 +3006,7 @@ html[data-theme="dark"] .authGate {
 /*  Stats grid  */
 .rpStats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 10px;
 }
@@ -3041,6 +3041,38 @@ html[data-theme="dark"] .authGate {
   font-weight: 700;
   color: var(--c-text);
   word-break: break-word;
+}
+
+.rpMetaGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+}
+
+.rpMetaRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--c-glass-bg);
+  border: 1px solid var(--c-glass-border);
+}
+
+.rpMetaLabel {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--c-muted);
+}
+
+.rpMetaValue {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--c-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /*  Pipeline rows  */
@@ -3102,6 +3134,12 @@ html[data-theme="dark"] .authGate {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.rpCaption {
+  font-size: 11px;
+  color: var(--c-muted);
+  margin-top: 6px;
 }
 
 /* ===================================
@@ -3823,6 +3861,14 @@ html[data-theme="dark"] .authGate {
 
   /*  Responsive analytics metrics  */
   .metricsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .rpStats {
+    grid-template-columns: 1fr;
+  }
+
+  .rpMetaGrid {
     grid-template-columns: 1fr;
   }
 }

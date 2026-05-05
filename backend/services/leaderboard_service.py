@@ -3,9 +3,52 @@ Leaderboard service - aggregates pipeline performance statistics.
 """
 import traceback
 from datetime import datetime
+from typing import Optional
 from dateutil.relativedelta import relativedelta
 
+from core.pipelines import CUSTOM_PIPELINE_NAME, SYSTEM_PIPELINE_NAMES
 from dependencies import get_supabase_user_client
+
+
+def _get_allowed_pipelines(sb, *, user_id: str, collection_id: Optional[str] = None) -> set:
+    allowed = set(SYSTEM_PIPELINE_NAMES)
+    custom_enabled = False
+    custom_names = set()
+    try:
+        if collection_id:
+            res = (
+                sb.table("rag_collections")
+                .select("custom_pipeline_config")
+                .eq("id", collection_id)
+                .eq("user_id", user_id)
+                .single()
+                .execute()
+            )
+            cfg = res.data.get("custom_pipeline_config") if res.data else None
+            custom_enabled = bool((cfg or {}).get("enabled"))
+            if custom_enabled:
+                name = (cfg or {}).get("preset_name") or CUSTOM_PIPELINE_NAME
+                custom_names.add(name)
+        else:
+            res = (
+                sb.table("rag_collections")
+                .select("custom_pipeline_config")
+                .eq("user_id", user_id)
+                .execute()
+            )
+            for row in res.data or []:
+                cfg = row.get("custom_pipeline_config") or {}
+                if cfg.get("enabled"):
+                    custom_enabled = True
+                    name = cfg.get("preset_name") or CUSTOM_PIPELINE_NAME
+                    custom_names.add(name)
+    except Exception:
+        custom_enabled = False
+
+    if custom_enabled:
+        custom_names.add(CUSTOM_PIPELINE_NAME)
+        allowed.update(custom_names)
+    return allowed
 
 
 def get_leaderboard(
@@ -59,6 +102,13 @@ def get_leaderboard(
             query = query.eq("mode", mode)
         
         res = query.order("created_at", desc=False).execute()
+        rows = res.data or []
+        allowed = _get_allowed_pipelines(
+            sb,
+            user_id=user_id,
+            collection_id=collection_id,
+        )
+        rows = [r for r in rows if r.get("best_pipeline") in allowed]
         
         # Get chat message count
         if mode in ("all", "chat"):
@@ -117,7 +167,7 @@ def get_leaderboard(
             
             for p in comp:
                 name = p.get("pipeline")
-                if not name:
+                if not name or name not in allowed:
                     continue
                 
                 final_score = (p.get("scores") or {}).get("final", 0)
@@ -201,7 +251,7 @@ def get_leaderboard(
             today_stats = {}
             for r in today_rows:
                 best = r.get("best_pipeline")
-                if best:
+                if best and best in allowed:
                     today_stats[best] = today_stats.get(best, 0) + 1
             
             if today_stats:
@@ -265,6 +315,9 @@ def get_global_leaderboard(
             query = query.eq("mode", mode)
 
         res = query.order("created_at", desc=False).execute()
+        rows = res.data or []
+        allowed = _get_allowed_pipelines(sb, user_id=user_id)
+        rows = [r for r in rows if r.get("best_pipeline") in allowed]
 
         if mode in ("all", "chat"):
             chat_query = sb.table("rag_chat_messages") \
@@ -279,7 +332,6 @@ def get_global_leaderboard(
         else:
             chat_count = 0
 
-        rows = res.data or []
         total_questions = len(rows)
 
         if not rows:
@@ -315,7 +367,7 @@ def get_global_leaderboard(
 
             for p in comp:
                 name = p.get("pipeline")
-                if not name:
+                if not name or name not in allowed:
                     continue
                 final_score = (p.get("scores") or {}).get("final", 0)
                 rt = p.get("retrieval_time_sec", 0)
@@ -376,7 +428,7 @@ def get_global_leaderboard(
             today_stats = {}
             for r in today_rows:
                 best = r.get("best_pipeline")
-                if best:
+                if best and best in allowed:
                     today_stats[best] = today_stats.get(best, 0) + 1
             if today_stats:
                 best_pipeline_today = max(today_stats.items(), key=lambda x: x[1])[0]

@@ -13,7 +13,8 @@ from config import get_settings
 from core.page_index_builder import build_page_index_tree
 from core.page_index_retrieval import retrieve_with_tree_trace
 from services.analytics_service import persist_query_analytics
-from core.llm import generate_answer_with_retry
+from core.llm import ensure_readable_answer_format, generate_answer_with_retry
+from core.question_guard import DOCUMENT_SCOPE_REFUSAL, is_out_of_document_scope
 from utils.text_utils import clean_text, enrich_answer_if_duration
 from utils.token_utils import estimate_cost_usd
 
@@ -194,6 +195,24 @@ def answer_with_tree(
     from utils.timing_utils import now_ms, elapsed_ms
 
     t_start = now_ms()
+    if is_out_of_document_scope(question):
+        return {
+            "question": question,
+            "collection_id": collection_id,
+            "mode": "fast",
+            "best_pipeline": "DOCUMENT_SCOPE_GUARD",
+            "final_answer": DOCUMENT_SCOPE_REFUSAL,
+            "metrics": {
+                "cache_hit": False,
+                "document_scope_guard": True,
+                "timings_ms": {"tree_traverse_ms": 0, "llm_ms": 0, "total_ms": 0},
+                "pipeline_latencies": [],
+                "tokens": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+                "cost_usd": 0,
+            },
+            "retrieval_comparison": [],
+            "citations": [],
+        }
 
     # 1. Load tree
     tree = load_tree(collection_id, sb)
@@ -213,6 +232,7 @@ def answer_with_tree(
     t_llm_start = now_ms()
     answer, _retry_meta, tokens = generate_answer_with_retry(question, context, fast=fast, model_name=model_name, api_key=api_key, temperature=temperature)
     final_answer = enrich_answer_if_duration(question, context, answer)
+    final_answer = ensure_readable_answer_format(question, final_answer)
     llm_ms = elapsed_ms(t_llm_start)
 
     total_ms = elapsed_ms(t_start)

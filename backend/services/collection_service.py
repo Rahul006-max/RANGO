@@ -5,6 +5,7 @@ import os
 import time
 import traceback
 import uuid
+from datetime import datetime, timezone
 from typing import Optional
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.vectorstores import Chroma
@@ -16,12 +17,13 @@ from dependencies import (
     PIPELINE_DB_PATHS,
     QA_CACHE,
     COLLECTION_FULLTEXT,
+    BUILD_STATS_CACHE,
     get_embeddings,
     invalidate_vectorstore_cache,
 )
-from core.pipelines import SYSTEM_PIPELINES, PIPELINE_PRESETS, get_pipeline_preset, normalize_search_type
+from core.pipelines import CUSTOM_PIPELINE_NAME, SYSTEM_PIPELINES, PIPELINE_PRESETS, get_pipeline_preset, normalize_search_type
 from core.retrieval import build_vectordb_for_pipeline, store_fulltext
-from utils.text_utils import docs_to_fulltext
+from utils.text_utils import docs_to_fulltext, split_documents
 
 
 def safe_delete_folder(folder_path: str):
@@ -331,19 +333,280 @@ def get_custom_pipeline(collection_id: str, user_id: str, access_token: str):
     }
 
 
-def save_custom_pipeline(collection_id: str, config_dict: dict, user_id: str, access_token: str):
-    """Save custom pipeline configuration for a collection."""
+def _normalize_custom_pipeline_config(config_dict: dict) -> dict:
+    """Validate and normalize a user custom pipeline config."""
+    raw_name = (
+        config_dict.get("pipeline_name")
+        or config_dict.get("preset_name")
+        or CUSTOM_PIPELINE_NAME
+    )
+    pipeline_name = str(raw_name).strip() or CUSTOM_PIPELINE_NAME
+    system_names = {p["name"] for p in SYSTEM_PIPELINES}
+    if pipeline_name in system_names:
+        raise ValueError("Custom pipeline name cannot match a built-in pipeline name.")
+
+    chunk_size = int(config_dict.get("chunk_size") or 800)
+    overlap = int(config_dict.get("overlap") or 120)
+    top_k = int(config_dict.get("top_k") or 6)
+    if chunk_size < 50 or chunk_size > 5000:
+        raise ValueError("Chunk size must be between 50 and 5000.")
+    if overlap < 0 or overlap >= chunk_size:
+        raise ValueError("Overlap must be 0 or greater and smaller than chunk size.")
+    if top_k < 1 or top_k > 100:
+        raise ValueError("Top K must be between 1 and 100.")
+
+    now = datetime.now(timezone.utc).isoformat()
+    return {
+        "enabled": bool(config_dict.get("enabled")),
+        "pipeline_name": pipeline_name,
+        "preset_name": pipeline_name,
+        "chunk_size": chunk_size,
+        "overlap": overlap,
+        "top_k": top_k,
+        "search_type": normalize_search_type(config_dict.get("search_type") or "mmr"),
+        "index_status": config_dict.get("index_status") or "not_built",
+        "chunks_created": int(config_dict.get("chunks_created") or 0),
+        "build_time_sec": config_dict.get("build_time_sec"),
+        "updated_at": now,
+    }
+
+
+def _custom_pipeline_names_to_replace(previous_config: Optional[dict], next_name: str) -> list[str]:
+    names = {next_name, CUSTOM_PIPELINE_NAME}
+    if previous_config:
+        old_name = (
+            previous_config.get("pipeline_name")
+            or previous_config.get("preset_name")
+            or ""
+        )
+        if old_name:
+            names.add(str(old_name).strip())
+    return [name for name in names if name]
+
+
+def _build_custom_pipeline_index(
+    *,
+    collection_id: str,
+    config_dict: dict,
+    user_id: str,
+    access_token: str,
+    previous_config: Optional[dict],
+) -> dict:
+    """Rebuild Supabase-backed chunks for the collection's single custom pipeline."""
+    start = time.time()
+    supabase_admin = get_supabase_admin()
+    if not supabase_admin:
+        return {"error": "SERVICE ROLE KEY missing", "status_code": 500}
+
     sb = get_supabase_user_client(access_token)
-    
-    sb.table("rag_collections").update({"custom_pipeline_config": config_dict}) \
+    files_res = (
+        sb.table("rag_files")
+        .select("id,filename,storage_path")
+        .eq("collection_id", collection_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
+    files = files_res.data or []
+    if not files:
+        return {"error": "No files found in this collection. Upload PDFs first.", "status_code": 400}
+
+    os.makedirs("uploads", exist_ok=True)
+    all_documents = []
+    temp_paths: list[str] = []
+    failed_files: list[str] = []
+    file_id_by_source: dict[str, str] = {}
+
+    for file_row in files:
+        try:
+            file_data = supabase_admin.storage.from_(STORAGE_BUCKET).download(file_row["storage_path"])
+            temp_path = os.path.join("uploads", f"{collection_id}_custom_{file_row['filename']}")
+            with open(temp_path, "wb") as f:
+                f.write(file_data)
+            temp_paths.append(temp_path)
+            file_id_by_source[temp_path] = file_row["id"]
+            file_id_by_source[os.path.abspath(temp_path)] = file_row["id"]
+
+            docs = PyPDFLoader(temp_path).load()
+            all_documents.extend(docs)
+        except Exception as e:
+            print(f"[WARN] Error loading {file_row.get('filename')}: {e}")
+            failed_files.append(file_row.get("filename") or "unknown")
+
+    try:
+        if not all_documents:
+            return {"error": "No documents could be loaded for the custom pipeline.", "status_code": 400}
+
+        chunks = split_documents(
+            all_documents,
+            chunk_size=config_dict["chunk_size"],
+            chunk_overlap=config_dict["overlap"],
+        )
+        if not chunks:
+            return {"error": "Custom pipeline produced no chunks.", "status_code": 400}
+        chunk_texts = [chunk.page_content[:4000] for chunk in chunks]
+        chunk_embeddings = get_embeddings().embed_documents(chunk_texts)
+
+        replace_names = _custom_pipeline_names_to_replace(
+            previous_config,
+            config_dict["pipeline_name"],
+        )
+        for pipeline_name in replace_names:
+            try:
+                supabase_admin.table("rag_chunks") \
+                    .delete() \
+                    .eq("collection_id", collection_id) \
+                    .eq("user_id", user_id) \
+                    .eq("pipeline_name", pipeline_name) \
+                    .execute()
+            except Exception as e:
+                print(f"[WARN] Could not delete old custom chunks ({pipeline_name}): {e}")
+            try:
+                sb.table("rag_pipeline_builds") \
+                    .delete() \
+                    .eq("collection_id", collection_id) \
+                    .eq("user_id", user_id) \
+                    .eq("pipeline_name", pipeline_name) \
+                    .execute()
+            except Exception as e:
+                print(f"[WARN] Could not delete old custom build row ({pipeline_name}): {e}")
+
+        chunk_rows = []
+        for idx, chunk in enumerate(chunks):
+            source_path = chunk.metadata.get("source", "")
+            matched_file_id = (
+                file_id_by_source.get(source_path)
+                or file_id_by_source.get(os.path.abspath(source_path))
+            )
+            if not matched_file_id and files:
+                matched_file_id = files[0]["id"]
+            chunk_rows.append({
+                "user_id": user_id,
+                "collection_id": collection_id,
+                "file_id": matched_file_id,
+                "pipeline_name": config_dict["pipeline_name"],
+                "chunk_size": config_dict["chunk_size"],
+                "overlap": config_dict["overlap"],
+                "chunk_index": idx,
+                "page_number": chunk.metadata.get("page", 0),
+                "chunk_text": chunk_texts[idx],
+                "embedding": chunk_embeddings[idx],
+            })
+
+        for i in range(0, len(chunk_rows), 500):
+            supabase_admin.table("rag_chunks").insert(chunk_rows[i:i + 500]).execute()
+
+        build_time_sec = round(time.time() - start, 3)
+        sb.table("rag_pipeline_builds").insert({
+            "user_id": user_id,
+            "collection_id": collection_id,
+            "pipeline_name": config_dict["pipeline_name"],
+            "chunk_size": config_dict["chunk_size"],
+            "overlap": config_dict["overlap"],
+            "search_type": config_dict["search_type"],
+            "top_k": config_dict["top_k"],
+            "chunks_created": len(chunks),
+            "build_time_sec": build_time_sec,
+        }).execute()
+
+        return {
+            "ok": True,
+            "chunks_created": len(chunks),
+            "build_time_sec": build_time_sec,
+            "failed_files": failed_files,
+        }
+    finally:
+        for tmp in temp_paths:
+            try:
+                if os.path.exists(tmp):
+                    os.remove(tmp)
+            except OSError:
+                pass
+
+
+def save_custom_pipeline(collection_id: str, config_dict: dict, user_id: str, access_token: str):
+    """Save and, when enabled, rebuild the custom pipeline for a collection."""
+    sb = get_supabase_user_client(access_token)
+    collection_res = (
+        sb.table("rag_collections")
+        .select("id,custom_pipeline_config")
+        .eq("id", collection_id)
+        .eq("user_id", user_id)
+        .maybe_single()
+        .execute()
+    )
+    if not collection_res.data:
+        return {"error": "Collection not found", "status_code": 404}
+
+    previous_config = collection_res.data.get("custom_pipeline_config") or {}
+    try:
+        normalized_config = _normalize_custom_pipeline_config(config_dict)
+    except ValueError as e:
+        return {"error": str(e), "status_code": 400}
+
+    if normalized_config["enabled"]:
+        building_config = {
+            **normalized_config,
+            "index_status": "building",
+            "chunks_created": 0,
+            "build_time_sec": None,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
+        sb.table("rag_collections").update({"custom_pipeline_config": building_config}) \
+            .eq("id", collection_id) \
+            .eq("user_id", user_id) \
+            .execute()
+
+        build_result = _build_custom_pipeline_index(
+            collection_id=collection_id,
+            config_dict=normalized_config,
+            user_id=user_id,
+            access_token=access_token,
+            previous_config=previous_config,
+        )
+        if "error" in build_result:
+            failed_config = {
+                **building_config,
+                "index_status": "failed",
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+            sb.table("rag_collections").update({"custom_pipeline_config": failed_config}) \
+                .eq("id", collection_id) \
+                .eq("user_id", user_id) \
+                .execute()
+            return build_result
+
+        normalized_config = {
+            **normalized_config,
+            "index_status": "ready",
+            "chunks_created": build_result["chunks_created"],
+            "build_time_sec": build_result["build_time_sec"],
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
+    else:
+        normalized_config = {
+            **normalized_config,
+            "index_status": "disabled",
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+    sb.table("rag_collections").update({"custom_pipeline_config": normalized_config}) \
         .eq("id", collection_id) \
         .eq("user_id", user_id) \
         .execute()
+
+    PIPELINE_DB_PATHS.setdefault(collection_id, {})[normalized_config["pipeline_name"]] = os.path.join(
+        "collections",
+        collection_id,
+        f"chroma_{normalized_config['pipeline_name'].replace(' ', '_').lower()}",
+    )
+    QA_CACHE.pop(collection_id, None)
+    BUILD_STATS_CACHE.pop(collection_id, None)
+    invalidate_vectorstore_cache(collection_id)
     
     return {
         "ok": True,
         "collection_id": collection_id,
-        "custom_pipeline": config_dict
+        "custom_pipeline": normalized_config
     }
 
 

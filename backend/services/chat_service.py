@@ -19,7 +19,9 @@ from dependencies import (
     supabase_vector_search,
 )
 from core.pipelines import SYSTEM_PIPELINES
+from core.question_guard import DOCUMENT_SCOPE_REFUSAL, is_out_of_document_scope
 from core.retrieval import dedupe_docs
+from core.llm import ensure_readable_answer_format, wants_numbered_list
 from utils.text_utils import clean_text, enrich_answer_if_duration, smart_extract_answer
 from models import ChatRequest
 
@@ -89,6 +91,26 @@ async def chat_stream_generator(
         "role": "user",
         "message": data.question
     }).execute()
+
+    if is_out_of_document_scope(data.question):
+        final_response = DOCUMENT_SCOPE_REFUSAL
+        for token in final_response:
+            yield token
+        sb.table("rag_chat_messages").insert({
+            "user_id": user_id,
+            "collection_id": data.collection_id,
+            "role": "assistant",
+            "message": final_response,
+        }).execute()
+        meta = {
+            "pipeline": "DOCUMENT_SCOPE_GUARD",
+            "latency_ms": round((time.time() - t_start) * 1000),
+            "docs_retrieved": 0,
+            "smart_extract": False,
+            "document_scope_guard": True,
+        }
+        yield f"\n\n__META__{json.dumps(meta)}"
+        return
 
     # Validate collection and route tree-indexed collections before vector-only logic.
     collection_res = (
@@ -264,7 +286,7 @@ Please answer the current question considering the conversation context.
             
             # Create conversational prompt
             conv_prompt = ChatPromptTemplate.from_template("""
-You are a helpful assistant having a conversation with a user about their documents.
+You are a document QA assistant having a conversation with a user about their uploaded documents.
 
 Documents available in this collection: {source_files}
 
@@ -278,8 +300,13 @@ Current question: {current_question}
 
 Instructions:
 - Answer using ONLY the document context above.
+- Do not answer small talk or general-world questions.
 - If multiple documents are present, treat each [filename] block as a separate source and compare/contrast them when relevant.
 - When the user asks "what do both/all documents say", summarise each document's contribution separately.
+- Use Markdown formatting.
+- If the user asks for points, topics, takeaways, or highlights, use a numbered list.
+- For numbered-list requests, every item must be on its own line as "1. **Short label:** explanation".
+- Do not return one long paragraph for list-style questions.
 - Consider the conversation history to provide a coherent response.
 - Keep responses conversational but informative.
 - If you can't answer from the documents, say so.
@@ -292,6 +319,7 @@ Answer:
             
             # Stream tokens directly — no duplicate invoke() call
             accumulated = ""
+            should_buffer_for_formatting = wants_numbered_list(data.question)
             async for chunk in chain.astream({
                 "source_files": ", ".join(source_files) if source_files else "(unknown)",
                 "conversation_context": conversation_context if len(chat_history) > 1 else "This is the start of our conversation.",
@@ -311,12 +339,15 @@ Answer:
                 if not token:
                     continue
                 accumulated += token
-                yield token
+                if not should_buffer_for_formatting:
+                    yield token
             
             response = enrich_answer_if_duration(data.question, context, accumulated)
+            response = ensure_readable_answer_format(data.question, response)
             final_response = response
-            # If enrich changed the response, send the delta
-            if response != accumulated:
+            if should_buffer_for_formatting:
+                yield response
+            elif response != accumulated:
                 yield response[len(accumulated):]
         
         # Store assistant response
